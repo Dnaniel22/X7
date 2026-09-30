@@ -56,6 +56,17 @@ public class Datos {
                 "Servicio de buffet personalizado para celebraciones y eventos.",
                 "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=900&q=80"
         ));
+
+        PRODUCTOS.add(new Producto(
+            4L,
+            "Torta Tres Leches",
+            "Tortas",
+            "Clásico",
+            90.00,
+            "Torta esponjosa bañada en tres leches, con un toque de canela.",
+            "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=900&q=80"
+
+        ));
     }
 
     public static synchronized long nuevoUsuarioId() {
