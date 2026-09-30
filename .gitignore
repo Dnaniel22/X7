@@ -37,6 +37,6 @@ build/
 Thumbs.db
 
 ### Base de datos H2 (se regenera al arrancar) ###
-data/
+/data/
 *.mv.db
 *.trace.db
