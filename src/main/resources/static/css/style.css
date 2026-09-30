@@ -174,3 +174,9 @@ h1, h2, h3, .font-serif {
   background-color: var(--secondary-burgundy);
   color: #F3EAE8;
 }
+
+.producto-card .card-img-top {
+  height: 220px;
+  object-fit: cover;
+  object-position: center;
+}

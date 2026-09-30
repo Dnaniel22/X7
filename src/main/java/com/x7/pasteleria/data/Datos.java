@@ -64,7 +64,7 @@ public class Datos {
             "Clásico",
             90.00,
             "Torta esponjosa bañada en tres leches, con un toque de canela.",
-            "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=900&q=80"
+            "https://i.blogs.es/4d76ad/pastel-tres-leches/840_560.jpg"
 
         ));
     }
