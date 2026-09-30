@@ -74,7 +74,6 @@
 
     <!-- Grilla de Productos -->
     <div class="row g-4" id="grillaProductos">
-      <!-- Thymeleaf: Spring Boot entrega la lista de productos desde WebController -->
       <div class="col-md-4 producto-card" th:each="p : ${productos}" th:attr="data-categoria=${p.categoria},data-texto=${p.nombre + ' ' + p.descripcion + ' ' + p.categoria}">
         <div class="card card-modern h-100 p-3">
           <img th:src="${p.imagen}" th:alt="${p.nombre}" class="card-img-top rounded-3">
