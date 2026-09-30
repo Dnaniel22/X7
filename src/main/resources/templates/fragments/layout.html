@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  Fragmentos reutilizables de Thymeleaf.
+  Este archivo no se sirve como página: cada plantilla incluye sus piezas con
+  th:replace="~{fragments/layout :: nombreDelFragmento}".
+-->
+
+<head th:fragment="head(titulo)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${titulo} + ' | Pastelería X7'">Pastelería X7</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+
+<!-- ============ Barra de navegación pública ============ -->
+<nav th:fragment="navbar(activo)" class="navbar navbar-expand-lg navbar-custom sticky-top">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between w-100 py-3">
+      <div class="d-flex align-items-center gap-3 order-1">
+        <div class="dropdown">
+          <a class="btn btn-outline-burgundy btn-sm rounded-circle" href="#" data-bs-toggle="dropdown"
+             aria-expanded="false" aria-label="Usuario">
+            <i class="bi bi-person-circle fs-5"></i>
+          </a>
+
+          <!-- El menú se arma en el servidor según la sesión activa -->
+          <ul class="dropdown-menu shadow border-0">
+            <th:block th:if="${usuarioSesion == null}">
+              <li>
+                <a class="dropdown-item" th:href="@{/login}">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" th:href="@{/registro}">
+                  <i class="bi bi-person-plus me-2"></i>Registrarse
+                </a>
+              </li>
+            </th:block>
+
+            <th:block th:unless="${usuarioSesion == null}">
+              <li>
+                <h6 class="dropdown-header" th:text="${usuarioSesion.nombre}">Usuario</h6>
+              </li>
+              <li>
+                <a class="dropdown-item"
+                   th:href="${usuarioSesion.esAdministrador()} ? @{/admin/panel} : @{/cliente/panel}">
+                  <i class="bi bi-speedometer2 me-2"></i>
+                  <span th:text="${usuarioSesion.esAdministrador()} ? 'Panel de Administración' : 'Mi Panel'">Panel</span>
+                </a>
+              </li>
+              <li th:unless="${usuarioSesion.esAdministrador()}">
+                <a class="dropdown-item" th:href="@{/cliente/perfil}">
+                  <i class="bi bi-person-vcard me-2"></i>Mis datos
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form th:action="@{/logout}" method="post" class="m-0">
+                  <button type="submit" class="dropdown-item">
+                    <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+                  </button>
+                </form>
+              </li>
+            </th:block>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-center order-2 flex-grow-1">
+        <a class="navbar-brand fs-3 m-0" th:href="@{/}">Pastelería <span>X7</span></a>
+      </div>
+
+      <div class="order-3 ms-2">
+        <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menú">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="collapse navbar-collapse justify-content-center pb-2" id="navbarNav">
+      <ul class="navbar-nav gap-lg-3 text-center">
+        <li class="nav-item">
+          <a class="nav-link" th:classappend="${activo == 'inicio'} ? 'active fw-bold'" th:href="@{/}">Inicio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:classappend="${activo == 'catalogo'} ? 'active fw-bold'" th:href="@{/catalogo}">Catálogo</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:classappend="${activo == 'pedido'} ? 'active fw-bold'" th:href="@{/pedido}">Encargar Pedido</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" th:classappend="${activo == 'reservar'} ? 'active fw-bold'" th:href="@{/reservar}">Catering y Eventos</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ Barra superior del panel administrador ============ -->
+<nav th:fragment="navbarAdmin" class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold" th:href="@{/admin/panel}">X7 <span>Intranet Admin</span></a>
+    <div class="d-flex align-items-center gap-3">
+      <a class="text-white-50 small text-decoration-none d-none d-md-inline" th:href="@{/}">
+        <i class="bi bi-globe me-1"></i>Ver sitio público
+      </a>
+      <span class="text-white small">
+        <i class="bi bi-person-circle me-1"></i>
+        <span th:text="${usuarioSesion != null} ? ${usuarioSesion.nombre} : 'Administrador'">Administrador</span>
+      </span>
+      <form th:action="@{/logout}" method="post" class="m-0">
+        <button type="submit" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-power"></i> Salir
+        </button>
+      </form>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ Mensajes de resultado (flash) ============ -->
+<div th:fragment="alertas">
+  <div th:if="${exito}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${exito}">Operación correcta.</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>
+  <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Ocurrió un error.</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>
+</div>
+
+<!-- ============ Pie de página ============ -->
+<footer th:fragment="footer" class="footer-modern py-5">
+  <div class="container">
+    <div class="row g-4 mb-4">
+      <div class="col-12 col-md-6 col-lg-4">
+        <h4 class="font-serif fw-bold text-white">Pastelería X7</h4>
+        <p class="small text-white-50">Empresa iqueña dedicada a la alta repostería y servicios de catering integral.</p>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <h6 class="fw-bold text-white mb-3">Enlaces Rápidos</h6>
+        <ul class="list-unstyled small">
+          <li><a th:href="@{/}" class="text-white-50 text-decoration-none">Inicio</a></li>
+          <li><a th:href="@{/catalogo}" class="text-white-50 text-decoration-none">Catálogo Digital</a></li>
+          <li><a th:href="@{/pedido}" class="text-white-50 text-decoration-none">Encargar Pedido</a></li>
+          <li><a th:href="@{/reservar}" class="text-white-50 text-decoration-none">Catering y Eventos</a></li>
+        </ul>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <h6 class="fw-bold text-white mb-3">Contacto</h6>
+        <p class="small text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i> Ica, Perú</p>
+        <p class="small text-white-50 mb-1"><i class="bi bi-whatsapp me-2"></i> +51 987 654 321</p>
+        <p class="small text-white-50"><i class="bi bi-envelope me-2"></i> contacto@pasteleriax7.com</p>
+      </div>
+    </div>
+    <div class="border-top border-secondary pt-3 text-center small text-white-50">
+      <p class="mb-0">&copy; 2026 Pastelería y Catering X7.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ Scripts comunes ============ -->
+<th:block th:fragment="scripts">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script th:src="@{/js/app.js}"></script>
+</th:block>
+
+<!-- ============ Modal: se necesita cuenta para continuar ============ -->
+<div th:fragment="modalAuth(titulo, mensaje)" class="modal fade" id="modalAuth" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-body p-4 text-center">
+        <i class="bi bi-lock text-danger fs-1 mb-3"></i>
+        <h3 class="font-serif fw-bold mb-2" th:text="${titulo}">Necesitas una cuenta</h3>
+        <p class="text-muted mb-4" th:text="${mensaje}">Crea tu cuenta para continuar.</p>
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+          <a th:href="@{/login}" class="btn btn-terracotta px-4">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
+          </a>
+          <a th:href="@{/registro}" class="btn btn-outline-burgundy px-4">
+            <i class="bi bi-person-plus me-2"></i>Registrarme
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
