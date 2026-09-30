@@ -1,83 +1,110 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.data.Datos;
+import com.x7.pasteleria.config.SesionActual;
+import com.x7.pasteleria.dto.LoginForm;
+import com.x7.pasteleria.dto.RegistroForm;
 import com.x7.pasteleria.model.Usuario;
+import com.x7.pasteleria.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Optional;
 
-@RestController
-@RequestMapping("/api/auth")
+@Controller
 public class AuthController {
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> datos, HttpSession session) {
-        String email = datos.getOrDefault("email", "").trim();
-        String password = datos.getOrDefault("password", "");
+    private final UsuarioService usuarioService;
+    private final SesionActual sesionActual;
 
-        Usuario usuario = Datos.USUARIOS.stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(email)
-                        && u.getPassword().equals(password))
-                .findFirst()
-                .orElse(null);
-
-        if (usuario == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("mensaje", "Correo o contraseña incorrectos."));
-        }
-
-        session.setAttribute("email", usuario.getEmail());
-        session.setAttribute("rol", usuario.getRol());
-
-        return ResponseEntity.ok(respuestaSesion(usuario));
+    public AuthController(UsuarioService usuarioService, SesionActual sesionActual) {
+        this.usuarioService = usuarioService;
+        this.sesionActual = sesionActual;
     }
 
-    @GetMapping("/sesion")
-    public ResponseEntity<?> sesion(HttpSession session) {
-        String email = (String) session.getAttribute("email");
+    @GetMapping("/login")
+    public String login(@RequestParam(required = false) String requerido,
+                        HttpSession session,
+                        Model model) {
 
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("mensaje", "No hay una sesión activa."));
+        Optional<Usuario> yaAutenticado = sesionActual.usuario(session);
+        if (yaAutenticado.isPresent()) {
+            return "redirect:" + rutaPanel(yaAutenticado.get());
         }
 
-        Usuario usuario = Datos.USUARIOS.stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(email))
-                .findFirst()
-                .orElse(null);
+        model.addAttribute("loginForm", new LoginForm());
+        model.addAttribute("requerido", requerido);
+        return "autenticacion/login";
+    }
 
-        if (usuario == null) {
-            session.invalidate();
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("mensaje", "La sesión ya no es válida."));
+    @PostMapping("/login")
+    public String procesarLogin(@Valid @ModelAttribute("loginForm") LoginForm loginForm,
+                                BindingResult resultado,
+                                HttpSession session) {
+
+        if (resultado.hasErrors()) {
+            return "autenticacion/login";
         }
 
-        return ResponseEntity.ok(respuestaSesion(usuario));
+        Optional<Usuario> usuario = usuarioService.autenticar(loginForm.getEmail(), loginForm.getPassword());
+        if (usuario.isEmpty()) {
+            resultado.reject("credenciales", "Correo o contraseña incorrectos.");
+            return "autenticacion/login";
+        }
+
+        sesionActual.iniciar(session, usuario.get());
+        return "redirect:" + rutaPanel(usuario.get());
+    }
+
+    @GetMapping("/registro")
+    public String registro(HttpSession session, Model model) {
+        Optional<Usuario> yaAutenticado = sesionActual.usuario(session);
+        if (yaAutenticado.isPresent()) {
+            return "redirect:" + rutaPanel(yaAutenticado.get());
+        }
+
+        model.addAttribute("registroForm", new RegistroForm());
+        return "autenticacion/registro";
+    }
+
+    @PostMapping("/registro")
+    public String procesarRegistro(@Valid @ModelAttribute("registroForm") RegistroForm registroForm,
+                                   BindingResult resultado,
+                                   HttpSession session,
+                                   RedirectAttributes flash) {
+
+        if (!registroForm.passwordsCoinciden()) {
+            resultado.rejectValue("password2", "noCoincide", "Las contraseñas no coinciden.");
+        }
+
+        if (registroForm.getEmail() != null && usuarioService.emailRegistrado(registroForm.getEmail())) {
+            resultado.rejectValue("email", "duplicado", "Ya existe una cuenta registrada con ese correo.");
+        }
+
+        if (resultado.hasErrors()) {
+            return "autenticacion/registro";
+        }
+
+        Usuario nuevo = usuarioService.registrarCliente(registroForm);
+        sesionActual.iniciar(session, nuevo);
+        flash.addFlashAttribute("exito", "¡Cuenta creada! Bienvenido a Pastelería X7, " + nuevo.getPrimerNombre() + ".");
+        return "redirect:/cliente/panel";
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpSession session) {
-        session.invalidate();
-        return ResponseEntity.noContent().build();
+    public String logout(HttpSession session) {
+        sesionActual.cerrar(session);
+        return "redirect:/";
     }
 
-    private Map<String, Object> respuestaSesion(Usuario usuario) {
-        Map<String, Object> usuarioSeguro = new LinkedHashMap<>();
-        usuarioSeguro.put("id", usuario.getId());
-        usuarioSeguro.put("nombre", usuario.getNombre());
-        usuarioSeguro.put("email", usuario.getEmail());
-        usuarioSeguro.put("telefono", usuario.getTelefono());
-        usuarioSeguro.put("direccion", usuario.getDireccion());
-        usuarioSeguro.put("rol", usuario.getRol());
-
-        Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("rol", usuario.getRol());
-        respuesta.put("email", usuario.getEmail());
-        respuesta.put("usuario", usuarioSeguro);
-        return respuesta;
+    private String rutaPanel(Usuario usuario) {
+        return usuario.esAdministrador() ? "/admin/panel" : "/cliente/panel";
     }
 }
