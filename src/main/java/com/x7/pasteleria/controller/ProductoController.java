@@ -1,66 +1,119 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.data.Datos;
 import com.x7.pasteleria.model.Producto;
-import jakarta.servlet.http.HttpSession;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.x7.pasteleria.service.ProductoService;
+import jakarta.validation.Valid;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
 
-@RestController
-@RequestMapping("/api/productos")
+@Controller
+@RequestMapping("/admin/productos")
 public class ProductoController {
 
-    @GetMapping
-    public ArrayList<Producto> listar() {
-        return new ArrayList<>(Datos.PRODUCTOS);
+    private static final List<String> CATEGORIAS = List.of("Tortas", "Bocaditos", "Buffets", "Otros");
+
+    private final ProductoService productoService;
+
+    public ProductoController(ProductoService productoService) {
+        this.productoService = productoService;
+    }
+
+    @ModelAttribute("categorias")
+    public List<String> categorias() {
+        return CATEGORIAS;
+    }
+
+    // ---------------- CREATE ----------------
+
+    @GetMapping("/nuevo")
+    public String formularioNuevo(Model model) {
+        model.addAttribute("producto", new Producto());
+        return "panel/producto-form";
     }
 
     @PostMapping
-    public ResponseEntity<?> guardar(@RequestBody Producto producto, HttpSession session) {
-        if (!esAdministrador(session)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("mensaje", "Acceso exclusivo para el administrador."));
+    public String crear(@Valid @ModelAttribute("producto") Producto producto,
+                        BindingResult resultado,
+                        RedirectAttributes flash) {
+
+        validarNombreDisponible(producto, null, resultado);
+
+        if (resultado.hasErrors()) {
+            return "panel/producto-form";
         }
 
-        if (producto.getNombre() == null || producto.getNombre().isBlank()
-                || producto.getCategoria() == null || producto.getCategoria().isBlank()
-                || producto.getDescripcion() == null || producto.getDescripcion().isBlank()
-                || producto.getPrecio() <= 0) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("mensaje", "Completa correctamente los datos del producto."));
-        }
-
-        producto.setId(Datos.nuevoProductoId());
-        if (producto.getEtiqueta() == null || producto.getEtiqueta().isBlank()) {
-            producto.setEtiqueta(producto.getCategoria());
-        }
-        if (producto.getImagen() == null) producto.setImagen("");
-
-        Datos.PRODUCTOS.add(producto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(producto);
+        producto.setId(null);
+        Producto guardado = productoService.guardar(producto);
+        flash.addFlashAttribute("exito", "Se agregó « " + guardado.getNombre() + " » al catálogo.");
+        return "redirect:/admin/panel?tab=productos";
     }
+
+    // ---------------- UPDATE ----------------
+
+    @GetMapping("/{id}/editar")
+    public String formularioEditar(@PathVariable Long id, Model model, RedirectAttributes flash) {
+        Optional<Producto> producto = productoService.buscarPorId(id);
+        if (producto.isEmpty()) {
+            flash.addFlashAttribute("error", "El producto #" + id + " ya no existe.");
+            return "redirect:/admin/panel?tab=productos";
+        }
+
+        model.addAttribute("producto", producto.get());
+        return "panel/producto-form";
+    }
+
+    @PutMapping("/{id}")
+    public String actualizar(@PathVariable Long id,
+                             @Valid @ModelAttribute("producto") Producto producto,
+                             BindingResult resultado,
+                             RedirectAttributes flash) {
+
+        if (productoService.buscarPorId(id).isEmpty()) {
+            flash.addFlashAttribute("error", "El producto #" + id + " ya no existe.");
+            return "redirect:/admin/panel?tab=productos";
+        }
+
+        validarNombreDisponible(producto, id, resultado);
+
+        if (resultado.hasErrors()) {
+            producto.setId(id);
+            return "panel/producto-form";
+        }
+
+        producto.setId(id);
+        Producto guardado = productoService.guardar(producto);
+        flash.addFlashAttribute("exito", "Se actualizó « " + guardado.getNombre() + " ».");
+        return "redirect:/admin/panel?tab=productos";
+    }
+
+    // ---------------- DELETE ----------------
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable Long id, HttpSession session) {
-        if (!esAdministrador(session)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("mensaje", "Acceso exclusivo para el administrador."));
+    public String eliminar(@PathVariable Long id, RedirectAttributes flash) {
+        Optional<Producto> producto = productoService.buscarPorId(id);
+        if (producto.isEmpty()) {
+            flash.addFlashAttribute("error", "El producto #" + id + " ya no existe.");
+            return "redirect:/admin/panel?tab=productos";
         }
 
-        boolean eliminado = Datos.PRODUCTOS.removeIf(p -> p.getId().equals(id));
-        if (!eliminado) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("mensaje", "Producto no encontrado."));
-        }
-
-        return ResponseEntity.noContent().build();
+        String nombre = producto.get().getNombre();
+        productoService.eliminar(id);
+        flash.addFlashAttribute("exito", "Se eliminó « " + nombre + " » del catálogo.");
+        return "redirect:/admin/panel?tab=productos";
     }
 
-    private boolean esAdministrador(HttpSession session) {
-        return "administrador".equalsIgnoreCase(String.valueOf(session.getAttribute("rol")));
+    private void validarNombreDisponible(Producto producto, Long idActual, BindingResult resultado) {
+        if (resultado.hasFieldErrors("nombre")) {
+            return;
+        }
+        if (productoService.nombreOcupadoPorOtro(producto.getNombre(), idActual)) {
+            resultado.rejectValue("nombre", "duplicado", "Ya existe otro producto con ese nombre.");
+        }
     }
 }
