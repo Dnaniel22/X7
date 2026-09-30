@@ -1,126 +1,69 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iniciar Sesión | Pastelería X7</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('Iniciar Sesión')}"></head>
 
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
-  <div class="container">
-    <div class="d-flex align-items-center justify-content-between w-100 py-3">
-      <div class="d-flex align-items-center gap-3 order-1">
-        <div class="dropdown">
-          <a class="btn btn-outline-burgundy btn-sm rounded-circle" href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Usuario">
-            <i class="bi bi-person-circle fs-5"></i>
-          </a>
-          <ul class="dropdown-menu shadow border-0" id="authMenu"></ul>
-        </div>
-      </div>
-
-      <div class="text-center order-2 flex-grow-1">
-        <a class="navbar-brand fs-3 m-0" th:href="@{/}">Pastelería <span>X7</span></a>
-      </div>
-
-      <div class="order-3 ms-2">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menú">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-    </div>
-
-    <div class="collapse navbar-collapse justify-content-center pb-2" id="navbarNav">
-      <ul class="navbar-nav gap-lg-3 text-center">
-        <li class="nav-item"><a class="nav-link" th:href="@{/}">Inicio</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/catalogo}">Catálogo</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/pedido}">Encargar Pedido</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/reservar}">Catering y Eventos</a></li>
-      </ul>
-    </div>
-  </div>
-</nav>
+  <nav th:replace="~{fragments/layout :: navbar('')}"></nav>
 
   <div class="container py-5">
     <div class="row justify-content-center">
-      <div class="col-md-6 col-lg-4">
+      <div class="col-md-7 col-lg-5">
         <div class="card card-modern p-4 text-center">
           <span class="badge badge-gold mb-3 mx-auto"><i class="bi bi-person-fill"></i> Cliente Registrado</span>
           <h3 class="font-serif fw-bold mb-1">Bienvenido de Nuevo</h3>
-          <p class="text-muted small mb-4">Ingresa con tu cuenta para revisar el estado de tus pedidos. Si eres administrador, usa tus credenciales de siempre y serás redirigido al panel de pedidos.</p>
+          <p class="text-muted small mb-4">
+            Ingresa con tu cuenta para revisar el estado de tus pedidos. Si eres administrador,
+            usa tus credenciales de siempre y serás redirigido al panel de gestión.
+          </p>
 
-          <div id="loginMensaje" class="alert alert-danger d-none text-start small" role="alert"></div>
+          <div th:if="${requerido}" class="alert alert-warning text-start small" role="alert">
+            <i class="bi bi-lock-fill me-2"></i>
+            <span th:if="${requerido == 'ADMINISTRADOR'}">Esa sección es exclusiva del administrador. Inicia sesión para continuar.</span>
+            <span th:unless="${requerido == 'ADMINISTRADOR'}">Necesitas iniciar sesión como cliente para ver esa sección.</span>
+          </div>
 
-          <form id="loginForm">
-            <div class="form-floating mb-3 text-start">
-              <input type="email" class="form-control" id="email" placeholder="maria@correo.com"
-                required>
-              <label for="email">Correo Electrónico</label>
+          <form th:action="@{/login}" th:object="${loginForm}" method="post" novalidate>
+
+            <!-- Error global: credenciales incorrectas -->
+            <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger text-start small" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <span th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</span>
             </div>
-            <div class="form-floating mb-3 text-start">
-              <input type="password" class="form-control" id="password" placeholder="••••••••"
-                required>
-              <label for="password">Contraseña</label>
+
+            <div class="mb-3 text-start">
+              <label for="email" class="form-label small fw-semibold">Correo Electrónico</label>
+              <input type="email" id="email" th:field="*{email}" th:errorclass="is-invalid"
+                     class="form-control" placeholder="maria@correo.com">
+              <div class="invalid-feedback" th:errors="*{email}"></div>
             </div>
 
-            <div class="d-flex justify-content-end mb-3">
-              <a href="#" class="small text-muted text-decoration-none">¿Olvidaste tu contraseña?</a>
+            <div class="mb-3 text-start">
+              <label for="password" class="form-label small fw-semibold">Contraseña</label>
+              <input type="password" id="password" th:field="*{password}" th:errorclass="is-invalid"
+                     class="form-control" placeholder="••••••••">
+              <div class="invalid-feedback" th:errors="*{password}"></div>
             </div>
 
             <button class="btn btn-terracotta w-100 py-3 fw-bold mb-3" type="submit">
-              <i class="bi me-1 bi-box-arrow-in-right"></i> Ingresar
+              <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
             </button>
           </form>
 
           <p class="text-center small text-muted mb-1">¿Aún no tienes cuenta?
             <a th:href="@{/registro}" class="fw-semibold text-decoration-none">Regístrate aquí</a>
           </p>
-          <a th:href="@{/}" class="text-decoration-none text-muted small mt-2"><i
-              class="bi bi-arrow-left"></i> Volver a la web</a>
+          <a th:href="@{/}" class="text-decoration-none text-muted small mt-2">
+            <i class="bi bi-arrow-left"></i> Volver a la web
+          </a>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="footer-modern py-5">
-    <div class="container">
-      <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-lg-4">
-          <h4 class="font-serif fw-bold text-white">Pastelería X7</h4>
-          <p class="small text-white-50">Empresa iqueña dedicada a la alta repostería y servicios de catering integral.</p>
-        </div>
-        <div class="col-12 col-md-6 col-lg-4">
-          <h6 class="fw-bold text-white mb-3">Enlaces Rápidos</h6>
-          <ul class="list-unstyled small">
-            <li><a th:href="@{/}" class="text-white-50 text-decoration-none">Inicio</a></li>
-            <li><a th:href="@{/catalogo}" class="text-white-50 text-decoration-none">Catálogo Digital</a></li>
-            <li><a th:href="@{/pedido}" class="text-white-50 text-decoration-none">Encargar Pedido</a></li>
-          </ul>
-        </div>
-        <div class="col-12 col-md-6 col-lg-4">
-          <h6 class="fw-bold text-white mb-3">Contacto</h6>
-          <p class="small text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i> Ica, Perú</p>
-          <p class="small text-white-50 mb-1"><i class="bi bi-whatsapp me-2"></i> +51 987 654 321</p>
-          <p class="small text-white-50"><i class="bi bi-envelope me-2"></i> contacto@pasteleriax7.com</p>
-        </div>
-      </div>
-      <div class="border-top border-secondary pt-3 text-center small text-white-50">
-        <p class="mb-0">&copy; 2026 Pastelería y Catering X7.</p>
-      </div>
-    </div>
-  </footer>
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script th:src="@{/js/x7-auth.js}"></script>
-  <script th:src="@{/js/script.js}"></script>
-  <script th:src="@{/js/usuario.js}"></script>
 </body>
-
 </html>
