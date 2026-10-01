@@ -12,8 +12,10 @@ public class Datos {
     public static final List<Producto> PRODUCTOS = new ArrayList<>();
     public static final List<Pedido> PEDIDOS = new ArrayList<>();
 
+    // Cada contador arranca en el siguiente id libre: los productos sembrados
+    // ocupan del 1 al 4, asi que el proximo producto debe ser el 5.
     private static long siguienteUsuario = 2;
-    private static long siguienteProducto = 4;
+    private static long siguienteProducto = 5;
     private static long siguientePedido = 1;
 
     static {

@@ -1,59 +1,21 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Panel | Pastelería X7</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('Mi Panel')}"></head>
 
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
-  <div class="container">
-    <div class="d-flex align-items-center justify-content-between w-100 py-3">
-      <div class="d-flex align-items-center gap-3 order-1">
-        <div class="dropdown">
-          <a class="btn btn-outline-burgundy btn-sm rounded-circle" href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Usuario">
-            <i class="bi bi-person-circle fs-5"></i>
-          </a>
-          <ul class="dropdown-menu shadow border-0" id="authMenu"></ul>
-        </div>
-      </div>
-
-      <div class="text-center order-2 flex-grow-1">
-        <a class="navbar-brand fs-3 m-0" th:href="@{/}">Pastelería <span>X7</span></a>
-      </div>
-
-      <div class="order-3 ms-2">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menú">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      </div>
-    </div>
-
-    <div class="collapse navbar-collapse justify-content-center pb-2" id="navbarNav">
-      <ul class="navbar-nav gap-lg-3 text-center">
-        <li class="nav-item"><a class="nav-link" th:href="@{/}">Inicio</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/catalogo}">Catálogo</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/pedido}">Encargar Pedido</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/reservar}">Catering y Eventos</a></li>
-      </ul>
-    </div>
-  </div>
-</nav>
+  <nav th:replace="~{fragments/layout :: navbar('')}"></nav>
 
   <div class="container py-5">
 
-    <!-- Bienvenida -->
+    <div th:replace="~{fragments/layout :: alertas}"></div>
+
     <div class="mb-4">
-      <h2 class="fw-bold font-serif mb-1" id="saludoNombre" th:text="|Hola, ${usuario.nombre} 👋|">Hola 👋</h2>
-      <p class="text-muted mb-0">Bienvenida a tu panel de cliente. Aquí puedes revisar el estado de tus pedidos y
-        solicitar productos nuevos.</p>
+      <h2 class="fw-bold font-serif mb-1" th:text="'Hola, ' + ${usuario.nombre} + ' 👋'">Hola 👋</h2>
+      <p class="text-muted mb-0">
+        Bienvenido a tu panel de cliente. Aquí puedes revisar el estado de tus pedidos y solicitar productos nuevos.
+      </p>
     </div>
 
     <!-- Accesos rápidos -->
@@ -77,9 +39,9 @@
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-modern h-100 p-4 text-center">
           <i class="bi bi-stars text-danger fs-2 mb-2"></i>
-          <h6 class="fw-bold mb-1">Producto Personalizado</h6>
-          <p class="small text-muted mb-3">Pide una torta a medida con diseño, sabor y colores a tu gusto.</p>
-          <a th:href="@{/pedido}" class="btn btn-outline-burgundy btn-sm mt-auto">Personalizar</a>
+          <h6 class="fw-bold mb-1">Cotizar un Evento</h6>
+          <p class="small text-muted mb-3">Solicita catering y buffet para matrimonios o eventos.</p>
+          <a th:href="@{/reservar}" class="btn btn-outline-burgundy btn-sm mt-auto">Cotizar</a>
         </div>
       </div>
     </div>
@@ -87,24 +49,46 @@
     <div class="row g-4">
       <!-- Mis Pedidos -->
       <div class="col-12 col-lg-8">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold font-serif mb-0"><i class="bi bi-receipt me-2 text-danger"></i>Mis Pedidos</h5>
-        </div>
+        <h5 class="fw-bold font-serif mb-3">
+          <i class="bi bi-receipt me-2 text-danger"></i>Mis Pedidos
+          <span class="badge bg-secondary ms-1" th:text="${#lists.size(pedidos)}">0</span>
+        </h5>
+
         <div class="card card-modern">
           <div class="table-responsive">
-<table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
                   <th>Código</th>
-                  <th>Producto</th>
+                  <th>Detalle</th>
                   <th>Entrega</th>
                   <th>Monto</th>
                   <th>Estado</th>
                 </tr>
               </thead>
-              <tbody id="tablaPedidos">
-                <tr>
-                  <td colspan="5" class="text-center text-muted py-4">Cargando pedidos...</td>
+              <tbody>
+                <!-- Thymeleaf recorre la lista que puso el controlador -->
+                <tr th:each="p : ${pedidos}">
+                  <td class="fw-bold" th:text="${p.codigo}">#PED-0001</td>
+                  <td>
+                    <span class="fw-semibold" th:text="${p.tipo} + ': ' + ${p.producto}">Pedido</span>
+                    <div class="small text-muted" th:if="${p.detalle}" th:text="${p.detalle}">Detalle</div>
+                  </td>
+                  <td th:text="${p.fechaEntrega} ?: '-'">-</td>
+                  <td class="fw-bold" th:text="${p.monto}">Por confirmar</td>
+                  <td>
+                    <span class="badge"
+                          th:classappend="${p.estado == 'ENTREGADO'} ? 'bg-success'
+                                        : (${p.estado == 'EN PREPARACIÓN'} ? 'bg-info text-dark' : 'bg-warning text-dark')"
+                          th:text="${p.estado}">PENDIENTE</span>
+                  </td>
+                </tr>
+
+                <tr th:if="${#lists.isEmpty(pedidos)}">
+                  <td colspan="5" class="text-center text-muted py-4">
+                    Aún no tienes pedidos registrados.
+                    <a th:href="@{/pedido}">Encarga tu primer pedido aquí</a>.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -117,53 +101,20 @@
         <h5 class="fw-bold font-serif mb-3"><i class="bi bi-person-vcard me-2 text-danger"></i>Mis Datos</h5>
         <div class="card card-modern p-4">
           <p class="small text-muted mb-1">Nombre</p>
-          <p class="fw-semibold mb-3" id="datNombre" th:text="${usuario.nombre}">—</p>
+          <p class="fw-semibold mb-3" th:text="${usuario.nombre}">—</p>
           <p class="small text-muted mb-1">Correo</p>
-          <p class="fw-semibold mb-3" id="datCorreo" th:text="${usuario.email}">—</p>
+          <p class="fw-semibold mb-3" th:text="${usuario.email}">—</p>
           <p class="small text-muted mb-1">Teléfono</p>
-          <p class="fw-semibold mb-3" id="datTelefono" th:text="${usuario.telefono}">—</p>
-          <p class="small text-muted mb-1">Dirección</p>
-          <p class="fw-semibold mb-3" id="datDireccion" th:text="${usuario.direccion}">—</p>
-          <button class="btn btn-outline-burgundy btn-sm w-100"><i class="bi bi-pencil-square me-1"></i> Editar
-            Datos</button>
+          <p class="fw-semibold mb-3" th:text="${usuario.telefono} ?: '—'">—</p>
+          <p class="small text-muted mb-0">Dirección</p>
+          <p class="fw-semibold mb-0" th:text="${usuario.direccion} ?: '—'">—</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="footer-modern py-5">
-    <div class="container">
-      <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-lg-4">
-          <h4 class="font-serif fw-bold text-white">Pastelería X7</h4>
-          <p class="small text-white-50">Empresa iqueña dedicada a la alta repostería y servicios de catering integral.</p>
-        </div>
-        <div class="col-12 col-md-6 col-lg-4">
-          <h6 class="fw-bold text-white mb-3">Enlaces Rápidos</h6>
-          <ul class="list-unstyled small">
-            <li><a th:href="@{/}" class="text-white-50 text-decoration-none">Inicio</a></li>
-            <li><a th:href="@{/catalogo}" class="text-white-50 text-decoration-none">Catálogo Digital</a></li>
-            <li><a th:href="@{/pedido}" class="text-white-50 text-decoration-none">Encargar Pedido</a></li>
-          </ul>
-        </div>
-        <div class="col-12 col-md-6 col-lg-4">
-          <h6 class="fw-bold text-white mb-3">Contacto</h6>
-          <p class="small text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i> Ica, Perú</p>
-          <p class="small text-white-50 mb-1"><i class="bi bi-whatsapp me-2"></i> +51 987 654 321</p>
-          <p class="small text-white-50"><i class="bi bi-envelope me-2"></i> contacto@pasteleriax7.com</p>
-        </div>
-      </div>
-      <div class="border-top border-secondary pt-3 text-center small text-white-50">
-        <p class="mb-0">&copy; 2026 Pastelería y Catering X7.</p>
-      </div>
-    </div>
-  </footer>
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script th:src="@{/js/x7-auth.js}"></script>
-  <script th:src="@{/js/script.js}"></script>
-  <script th:src="@{/js/usuario.js}"></script>
 </body>
-
 </html>
