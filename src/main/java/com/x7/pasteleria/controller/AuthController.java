@@ -1,110 +1,83 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.config.SesionActual;
-import com.x7.pasteleria.dto.LoginForm;
-import com.x7.pasteleria.dto.RegistroForm;
+import com.x7.pasteleria.data.Datos;
 import com.x7.pasteleria.model.Usuario;
-import com.x7.pasteleria.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-@Controller
+@RestController
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UsuarioService usuarioService;
-    private final SesionActual sesionActual;
-
-    public AuthController(UsuarioService usuarioService, SesionActual sesionActual) {
-        this.usuarioService = usuarioService;
-        this.sesionActual = sesionActual;
-    }
-
-    @GetMapping("/login")
-    public String login(@RequestParam(required = false) String requerido,
-                        HttpSession session,
-                        Model model) {
-
-        Optional<Usuario> yaAutenticado = sesionActual.usuario(session);
-        if (yaAutenticado.isPresent()) {
-            return "redirect:" + rutaPanel(yaAutenticado.get());
-        }
-
-        model.addAttribute("loginForm", new LoginForm());
-        model.addAttribute("requerido", requerido);
-        return "autenticacion/login";
-    }
-
     @PostMapping("/login")
-    public String procesarLogin(@Valid @ModelAttribute("loginForm") LoginForm loginForm,
-                                BindingResult resultado,
-                                HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> datos, HttpSession session) {
+        String email = datos.getOrDefault("email", "").trim();
+        String password = datos.getOrDefault("password", "");
 
-        if (resultado.hasErrors()) {
-            return "autenticacion/login";
+        Usuario usuario = Datos.USUARIOS.stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email)
+                        && u.getPassword().equals(password))
+                .findFirst()
+                .orElse(null);
+
+        if (usuario == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "Correo o contraseña incorrectos."));
         }
 
-        Optional<Usuario> usuario = usuarioService.autenticar(loginForm.getEmail(), loginForm.getPassword());
-        if (usuario.isEmpty()) {
-            resultado.reject("credenciales", "Correo o contraseña incorrectos.");
-            return "autenticacion/login";
-        }
+        session.setAttribute("email", usuario.getEmail());
+        session.setAttribute("rol", usuario.getRol());
 
-        sesionActual.iniciar(session, usuario.get());
-        return "redirect:" + rutaPanel(usuario.get());
+        return ResponseEntity.ok(respuestaSesion(usuario));
     }
 
-    @GetMapping("/registro")
-    public String registro(HttpSession session, Model model) {
-        Optional<Usuario> yaAutenticado = sesionActual.usuario(session);
-        if (yaAutenticado.isPresent()) {
-            return "redirect:" + rutaPanel(yaAutenticado.get());
+    @GetMapping("/sesion")
+    public ResponseEntity<?> sesion(HttpSession session) {
+        String email = (String) session.getAttribute("email");
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "No hay una sesión activa."));
         }
 
-        model.addAttribute("registroForm", new RegistroForm());
-        return "autenticacion/registro";
-    }
+        Usuario usuario = Datos.USUARIOS.stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                .findFirst()
+                .orElse(null);
 
-    @PostMapping("/registro")
-    public String procesarRegistro(@Valid @ModelAttribute("registroForm") RegistroForm registroForm,
-                                   BindingResult resultado,
-                                   HttpSession session,
-                                   RedirectAttributes flash) {
-
-        if (!registroForm.passwordsCoinciden()) {
-            resultado.rejectValue("password2", "noCoincide", "Las contraseñas no coinciden.");
+        if (usuario == null) {
+            session.invalidate();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "La sesión ya no es válida."));
         }
 
-        if (registroForm.getEmail() != null && usuarioService.emailRegistrado(registroForm.getEmail())) {
-            resultado.rejectValue("email", "duplicado", "Ya existe una cuenta registrada con ese correo.");
-        }
-
-        if (resultado.hasErrors()) {
-            return "autenticacion/registro";
-        }
-
-        Usuario nuevo = usuarioService.registrarCliente(registroForm);
-        sesionActual.iniciar(session, nuevo);
-        flash.addFlashAttribute("exito", "¡Cuenta creada! Bienvenido a Pastelería X7, " + nuevo.getPrimerNombre() + ".");
-        return "redirect:/cliente/panel";
+        return ResponseEntity.ok(respuestaSesion(usuario));
     }
 
     @PostMapping("/logout")
-    public String logout(HttpSession session) {
-        sesionActual.cerrar(session);
-        return "redirect:/";
+    public ResponseEntity<Void> logout(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.noContent().build();
     }
 
-    private String rutaPanel(Usuario usuario) {
-        return usuario.esAdministrador() ? "/admin/panel" : "/cliente/panel";
+    private Map<String, Object> respuestaSesion(Usuario usuario) {
+        Map<String, Object> usuarioSeguro = new LinkedHashMap<>();
+        usuarioSeguro.put("id", usuario.getId());
+        usuarioSeguro.put("nombre", usuario.getNombre());
+        usuarioSeguro.put("email", usuario.getEmail());
+        usuarioSeguro.put("telefono", usuario.getTelefono());
+        usuarioSeguro.put("direccion", usuario.getDireccion());
+        usuarioSeguro.put("rol", usuario.getRol());
+
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("rol", usuario.getRol());
+        respuesta.put("email", usuario.getEmail());
+        respuesta.put("usuario", usuarioSeguro);
+        return respuesta;
     }
 }

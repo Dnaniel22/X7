@@ -1,150 +1,139 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.config.SesionActual;
-import com.x7.pasteleria.dto.PedidoForm;
-import com.x7.pasteleria.dto.ReservaForm;
+import com.x7.pasteleria.data.Datos;
 import com.x7.pasteleria.model.Pedido;
-import com.x7.pasteleria.model.Producto;
-import com.x7.pasteleria.model.Rol;
-import com.x7.pasteleria.model.TamanoTorta;
 import com.x7.pasteleria.model.Usuario;
-import com.x7.pasteleria.service.PedidoService;
-import com.x7.pasteleria.service.ProductoService;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
-@Controller
+@RestController
+@RequestMapping("/api/pedidos")
 public class PedidoController {
 
-    private static final List<String> TIPOS_EVENTO = List.of(
-            "Matrimonio", "Quinceañero", "Evento Corporativo", "Aniversario / Cumpleaños");
-
-    private final PedidoService pedidoService;
-    private final ProductoService productoService;
-    private final SesionActual sesionActual;
-
-    public PedidoController(PedidoService pedidoService,
-                            ProductoService productoService,
-                            SesionActual sesionActual) {
-        this.pedidoService = pedidoService;
-        this.productoService = productoService;
-        this.sesionActual = sesionActual;
-    }
-
-    @ModelAttribute("productos")
-    public List<Producto> productos() {
-        return productoService.listar();
-    }
-
-    @ModelAttribute("tamanos")
-    public TamanoTorta[] tamanos() {
-        return TamanoTorta.values();
-    }
-
-    @ModelAttribute("tiposEvento")
-    public List<String> tiposEvento() {
-        return TIPOS_EVENTO;
-    }
-
-    @ModelAttribute("productoPersonalizado")
-    public String productoPersonalizado() {
-        return PedidoForm.PRODUCTO_PERSONALIZADO;
-    }
-
-    /** Se usa como atributo min de los campos <input type="date">. */
-    @ModelAttribute("fechaMinima")
-    public String fechaMinima() {
-        return LocalDate.now().plusDays(1).toString();
-    }
-
-    // ---------------- Encargar pedido ----------------
-
-    @GetMapping("/pedido")
-    public String formularioPedido(@RequestParam(required = false) String producto,
-                                   HttpSession session,
-                                   Model model) {
-
-        Usuario cliente = sesionActual.usuarioConRol(session, Rol.CLIENTE).orElse(null);
-        model.addAttribute("pedidoForm", PedidoForm.paraCliente(cliente, producto));
-        return "pedido";
-    }
-
-    @PostMapping("/pedido")
-    public String registrarPedido(@Valid @ModelAttribute("pedidoForm") PedidoForm pedidoForm,
-                                  BindingResult resultado,
-                                  HttpSession session,
-                                  Model model,
-                                  RedirectAttributes flash) {
-
-        Optional<Usuario> cliente = sesionActual.usuarioConRol(session, Rol.CLIENTE);
-        if (cliente.isEmpty()) {
-            model.addAttribute("mostrarModalAuth", true);
-            return "pedido";
+    @GetMapping
+    public ResponseEntity<?> listarTodos(HttpSession session) {
+        if (!esAdministrador(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("mensaje", "Acceso exclusivo para el administrador."));
         }
 
-        validarProductoExiste(pedidoForm, resultado);
-
-        if (resultado.hasErrors()) {
-            return "pedido";
-        }
-
-        Pedido pedido = pedidoService.registrarPedido(pedidoForm, cliente.get());
-        flash.addFlashAttribute("exito",
-                "¡Pedido " + pedido.getCodigo() + " registrado! Te contactaremos para confirmar los detalles.");
-        return "redirect:/cliente/panel";
+        return ResponseEntity.ok(ordenados(Datos.PEDIDOS));
     }
 
-    // ---------------- Cotizar catering ----------------
+    @GetMapping("/mis-pedidos")
+    public ResponseEntity<?> misPedidos(HttpSession session) {
+        String email = (String) session.getAttribute("email");
+        if (email == null || !"cliente".equalsIgnoreCase(String.valueOf(session.getAttribute("rol")))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "Debes iniciar sesión como cliente."));
+        }
 
-    @GetMapping("/reservar")
-    public String formularioReserva(Model model) {
-        model.addAttribute("reservaForm", new ReservaForm());
-        return "reservar";
+        List<Pedido> pedidos = Datos.PEDIDOS.stream()
+                .filter(p -> email.equalsIgnoreCase(p.getEmailCliente()))
+                .sorted(Comparator.comparing(Pedido::getId).reversed())
+                .toList();
+
+        return ResponseEntity.ok(pedidos);
     }
 
-    @PostMapping("/reservar")
-    public String registrarReserva(@Valid @ModelAttribute("reservaForm") ReservaForm reservaForm,
-                                   BindingResult resultado,
-                                   HttpSession session,
-                                   Model model,
-                                   RedirectAttributes flash) {
-
-        Optional<Usuario> cliente = sesionActual.usuarioConRol(session, Rol.CLIENTE);
-        if (cliente.isEmpty()) {
-            model.addAttribute("mostrarModalAuth", true);
-            return "reservar";
+    @PostMapping
+    public ResponseEntity<?> crear(@RequestBody Pedido pedido, HttpSession session) {
+        String email = (String) session.getAttribute("email");
+        if (email == null || !"cliente".equalsIgnoreCase(String.valueOf(session.getAttribute("rol")))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "Debes iniciar sesión como cliente."));
         }
 
-        if (resultado.hasErrors()) {
-            return "reservar";
+        if (pedido.getTipo() == null || pedido.getTipo().isBlank()
+                || pedido.getProducto() == null || pedido.getProducto().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("mensaje", "El tipo y el producto son obligatorios."));
         }
 
-        Pedido pedido = pedidoService.registrarReserva(reservaForm, cliente.get());
-        flash.addFlashAttribute("exito",
-                "¡Solicitud " + pedido.getCodigo() + " registrada! Te enviaremos la cotización a tu correo.");
-        return "redirect:/cliente/panel";
+        Usuario usuario = Datos.USUARIOS.stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                .findFirst()
+                .orElse(null);
+
+        if (usuario == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("mensaje", "Usuario no encontrado."));
+        }
+
+        long id = Datos.nuevoPedidoId();
+        pedido.setId(id);
+        pedido.setCodigo(String.format("#PED-%04d", 1000 + id));
+        pedido.setEstado("PENDIENTE");
+        pedido.setNombreCliente(usuario.getNombre());
+        pedido.setEmailCliente(usuario.getEmail());
+        if (pedido.getMonto() == null || pedido.getMonto().isBlank()) {
+            pedido.setMonto("Por confirmar");
+        }
+
+        Datos.PEDIDOS.add(pedido);
+        return ResponseEntity.status(HttpStatus.CREATED).body(pedido);
     }
 
-    /** El desplegable puede traer un producto que el administrador acaba de eliminar. */
-    private void validarProductoExiste(PedidoForm pedidoForm, BindingResult resultado) {
-        if (resultado.hasFieldErrors("producto") || pedidoForm.esPersonalizado()) {
-            return;
+    @PutMapping("/{id}/estado")
+    public ResponseEntity<?> actualizarEstado(@PathVariable Long id,
+                                               @RequestBody Map<String, String> datos,
+                                               HttpSession session) {
+        if (!esAdministrador(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("mensaje", "Acceso exclusivo para el administrador."));
         }
-        if (productoService.buscarPorNombre(pedidoForm.getProducto()).isEmpty()) {
-            resultado.rejectValue("producto", "inexistente",
-                    "El producto seleccionado ya no está disponible en el catálogo.");
+
+        Pedido pedido = Datos.PEDIDOS.stream()
+                .filter(p -> p.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+
+        if (pedido == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("mensaje", "Pedido no encontrado."));
         }
+
+        String estado = datos.getOrDefault("estado", "");
+        if (!estado.equals("PENDIENTE")
+                && !estado.equals("EN PREPARACIÓN")
+                && !estado.equals("ENTREGADO")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("mensaje", "Estado no válido."));
+        }
+
+        pedido.setEstado(estado);
+        return ResponseEntity.ok(pedido);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminar(@PathVariable Long id, HttpSession session) {
+        if (!esAdministrador(session)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("mensaje", "Acceso exclusivo para el administrador."));
+        }
+
+        boolean eliminado = Datos.PEDIDOS.removeIf(p -> p.getId().equals(id));
+        if (!eliminado) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("mensaje", "Pedido no encontrado."));
+        }
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean esAdministrador(HttpSession session) {
+        return "administrador".equalsIgnoreCase(String.valueOf(session.getAttribute("rol")));
+    }
+
+    private List<Pedido> ordenados(List<Pedido> pedidos) {
+        return pedidos.stream()
+                .sorted(Comparator.comparing(Pedido::getId).reversed())
+                .toList();
     }
 }

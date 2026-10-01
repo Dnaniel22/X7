@@ -1,125 +1,126 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/layout :: head('Encargar Pedido')}"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encargar Pedido | Pastelería X7</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
 
 <body>
 
-  <nav th:replace="~{fragments/layout :: navbar('pedido')}"></nav>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between w-100 py-3">
+      <div class="d-flex align-items-center gap-3 order-1">
+        <div class="dropdown">
+          <a class="btn btn-outline-burgundy btn-sm rounded-circle" href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Usuario">
+            <i class="bi bi-person-circle fs-5"></i>
+          </a>
+          <ul class="dropdown-menu shadow border-0" id="authMenu"></ul>
+        </div>
+      </div>
+
+      <div class="text-center order-2 flex-grow-1">
+        <a class="navbar-brand fs-3 m-0" th:href="@{/}">Pastelería <span>X7</span></a>
+      </div>
+
+      <div class="order-3 ms-2">
+        <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menú">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="collapse navbar-collapse justify-content-center pb-2" id="navbarNav">
+      <ul class="navbar-nav gap-lg-3 text-center">
+        <li class="nav-item"><a class="nav-link" th:href="@{/}">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/catalogo}">Catálogo</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/pedido}">Encargar Pedido</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/reservar}">Catering y Eventos</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
 
   <div class="container py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-lg-8">
 
-        <div th:replace="~{fragments/layout :: alertas}"></div>
-
-        <div class="card card-modern p-4">
+        <!-- Formulario de pedido: visible siempre, invitados pueden verlo y llenarlo -->
+        <div id="pedidoFormulario" class="card card-modern p-4">
           <div class="text-center mb-4">
             <h2 class="font-serif fw-bold">Solicitud de Pedido</h2>
-            <p class="text-muted small">Llena los datos requeridos para procesar la cotización de tu pedido.</p>
+            <p class="text-muted small">Llena los datos requeridos para procesar la cotización de tu pedido.
+            </p>
           </div>
 
-          <form th:action="@{/pedido}" th:object="${pedidoForm}" method="post" novalidate>
+          <div id="pedidoMensaje" class="alert d-none" role="alert"></div>
 
-            <!-- Resumen de errores de validación devueltos por el servidor -->
-            <div class="alert alert-danger" role="alert" th:if="${#fields.hasAnyErrors()}">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i>
-              Revisa los campos marcados en rojo antes de continuar.
-            </div>
-
+          <form id="formPedido">
             <h5 class="fw-bold mb-3 text-danger"><i class="bi bi-person me-2"></i>1. Datos de Contacto</h5>
             <div class="row g-3 mb-4">
               <div class="col-12 col-md-6">
-                <label for="nombreContacto" class="form-label small fw-semibold">Nombre Completo *</label>
-                <input type="text" id="nombreContacto" th:field="*{nombreContacto}" th:errorclass="is-invalid"
-                       class="form-control" placeholder="Ej. Ana Torres">
-                <div class="invalid-feedback" th:errors="*{nombreContacto}"></div>
+                <label class="form-label small fw-semibold">Nombre Completo *</label>
+                <input type="text" id="pedNombre" class="form-control" placeholder="Ej. Ana Torres" required>
               </div>
               <div class="col-12 col-md-6">
-                <label for="telefono" class="form-label small fw-semibold">Teléfono / WhatsApp *</label>
-                <input type="tel" id="telefono" th:field="*{telefono}" th:errorclass="is-invalid"
-                       class="form-control" placeholder="987654321">
-                <div class="invalid-feedback" th:errors="*{telefono}"></div>
+                <label class="form-label small fw-semibold">Teléfono / WhatsApp *</label>
+                <input type="tel" id="pedTelefono" class="form-control" placeholder="987654321" required>
               </div>
               <div class="col-12">
-                <label for="direccion" class="form-label small fw-semibold">Dirección de Entrega en Ica *</label>
-                <input type="text" id="direccion" th:field="*{direccion}" th:errorclass="is-invalid"
-                       class="form-control" placeholder="Urb. La Angostura Mz. B Lt. 4, Ica">
-                <div class="invalid-feedback" th:errors="*{direccion}"></div>
+                <label class="form-label small fw-semibold">Dirección de Entrega en Ica *</label>
+                <input type="text" id="pedDireccion" class="form-control" placeholder="Urb. La Angostura Mz. B Lt. 4, Ica" required>
               </div>
             </div>
 
-            <h5 class="fw-bold mb-3 text-danger">
-              <i class="bi bi-cake2 me-2"></i>2. Especificaciones de la Torta o Bocaditos
-            </h5>
+            <h5 class="fw-bold mb-3 text-danger"><i class="bi bi-cake2 me-2"></i>2. Especificaciones de la Torta o
+              Bocaditos</h5>
             <div class="row g-3 mb-4">
               <div class="col-12 col-md-6">
-                <label for="producto" class="form-label small fw-semibold">Tipo de Producto *</label>
-                <select id="producto" th:field="*{producto}" th:errorclass="is-invalid" class="form-select">
-                  <option value="">Seleccione...</option>
-                  <option th:each="p : ${productos}"
-                          th:value="${p.nombre}"
-                          th:attr="data-precio=${p.precio}"
-                          th:text="${p.nombre} + ' — S/ ' + ${#numbers.formatDecimal(p.precio, 1, 'COMMA', 2, 'POINT')}">
-                    Producto
-                  </option>
-                  <option th:value="${productoPersonalizado}" th:text="${productoPersonalizado}">Otro</option>
+                <label class="form-label small fw-semibold">Tipo de Producto *</label>
+                <select id="pedTipoProducto" class="form-select" required>
+                  <option value="" selected disabled>Seleccione...</option>
                 </select>
-                <div class="invalid-feedback" th:errors="*{producto}"></div>
               </div>
-
               <div class="col-12 col-md-6">
-                <label for="fechaEntrega" class="form-label small fw-semibold">Fecha de Entrega *</label>
-                <input type="date" id="fechaEntrega" th:field="*{fechaEntrega}" th:errorclass="is-invalid"
-                       th:attr="min=${fechaMinima}" class="form-control">
-                <div class="invalid-feedback" th:errors="*{fechaEntrega}"></div>
+                <label class="form-label small fw-semibold">Fecha de Entrega Compromiso *</label>
+                <input type="date" id="pedFecha" class="form-control" required>
               </div>
-
               <div class="col-12 col-md-6">
-                <label for="tamano" class="form-label small fw-semibold">Tamaño de la Torta *</label>
-                <select id="tamano" th:field="*{tamano}" th:errorclass="is-invalid" class="form-select">
-                  <option value="">Seleccione...</option>
-                  <option th:each="t : ${tamanos}"
-                          th:value="${t}"
-                          th:attr="data-factor=${t.factor}"
-                          th:text="${t.etiqueta}">Tamaño</option>
+                <label class="form-label small fw-semibold">Tamaño de la Torta *</label>
+                <select id="pedTamano" class="form-select" required>
+                  <option value="" selected disabled>Seleccione...</option>
+                  <option value="Pequeña (6-8 porciones)" data-factor="1">Pequeña (6-8 porciones)</option>
+                  <option value="Mediana (12-15 porciones)" data-factor="1.5">Mediana (12-15 porciones)</option>
+                  <option value="Grande (20-25 porciones)" data-factor="2">Grande (20-25 porciones)</option>
+                  <option value="Extra Grande (30-40 porciones)" data-factor="3">Extra Grande (30-40 porciones)</option>
                 </select>
-                <div class="invalid-feedback" th:errors="*{tamano}"></div>
               </div>
-
               <div class="col-12 col-md-6">
-                <label for="cantidad" class="form-label small fw-semibold">Cantidad *</label>
-                <input type="number" id="cantidad" th:field="*{cantidad}" th:errorclass="is-invalid"
-                       class="form-control" min="1" max="50">
-                <div class="invalid-feedback" th:errors="*{cantidad}"></div>
+                <label class="form-label small fw-semibold">Cantidad *</label>
+                <input type="number" id="pedCantidad" class="form-control" min="1" value="1" required>
               </div>
-
               <div class="col-12 col-md-6">
-                <label for="colores" class="form-label small fw-semibold">Colores / Temática</label>
-                <input type="text" id="colores" th:field="*{colores}" th:errorclass="is-invalid"
-                       class="form-control" placeholder="Ej. Tono Rose Gold y Flores">
-                <div class="invalid-feedback" th:errors="*{colores}"></div>
+                <label class="form-label small fw-semibold">Colores / Temática</label>
+                <input type="text" id="pedColores" class="form-control" placeholder="Ej. Tono Rose Gold y Flores">
               </div>
-
               <div class="col-12 col-md-6">
-                <label for="totalEstimado" class="form-label small fw-semibold">Total Estimado</label>
-                <input type="text" id="totalEstimado" class="form-control fw-bold text-danger"
-                       value="Por confirmar" readonly>
-                <div class="form-text">El monto final lo confirma la pastelería.</div>
+                <label class="form-label small fw-semibold">Total Estimado</label>
+                <input type="text" id="pedTotalEstimado" class="form-control fw-bold text-danger" value="Por confirmar" readonly>
               </div>
-
               <div class="col-12">
-                <label for="detalles" class="form-label small fw-semibold">Detalles Especiales</label>
-                <textarea id="detalles" th:field="*{detalles}" th:errorclass="is-invalid"
-                          class="form-control" rows="3"
-                          placeholder="Dedicatoria o sabores preferidos..."></textarea>
-                <div class="invalid-feedback" th:errors="*{detalles}"></div>
+                <label class="form-label small fw-semibold">Detalles Especiales</label>
+                <textarea id="pedDetalles" class="form-control" rows="3" placeholder="Dedicatoria o sabores preferidos..."></textarea>
               </div>
             </div>
 
-            <button type="submit" class="btn btn-terracotta w-100 py-3 fw-bold">
-              <i class="bi bi-check-circle me-2"></i> Confirmar y Registrar Pedido
-            </button>
+            <button type="submit" class="btn btn-terracotta w-100 py-3 fw-bold"><i class="bi bi-check-circle me-2"></i>
+              Confirmar y Registrar Pedido</button>
           </form>
         </div>
 
@@ -127,19 +128,56 @@
     </div>
   </div>
 
-  <div th:if="${mostrarModalAuth}"
-       th:replace="~{fragments/layout :: modalAuth(
-         'Necesitas una cuenta para encargar un pedido',
-         'Así podemos guardar tu pedido en tu cuenta y que puedas revisar su estado cuando quieras.')}"></div>
+  <!-- Modal: pide iniciar sesión o registrarse al intentar confirmar sin cuenta -->
+  <div class="modal fade" id="modalAuthPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 rounded-4 shadow">
+        <div class="modal-body p-4 text-center">
+          <i class="bi bi-lock text-danger fs-1 mb-3"></i>
+          <h3 class="font-serif fw-bold mb-2">Necesitas una cuenta para encargar un pedido</h3>
+          <p class="text-muted mb-4">Así podemos guardar tu pedido en tu cuenta y que puedas revisar su estado
+            cuando quieras.</p>
+          <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+            <a th:href="@{/login}" class="btn btn-terracotta px-4"><i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión</a>
+            <a th:href="@{/registro}" class="btn btn-outline-burgundy px-4"><i class="bi bi-person-plus me-2"></i>Registrarme</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <footer th:replace="~{fragments/layout :: footer}"></footer>
-  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-
-  <script th:if="${mostrarModalAuth}">
-    document.addEventListener("DOMContentLoaded", function () {
-      new bootstrap.Modal(document.getElementById("modalAuth")).show();
-    });
-  </script>
-
+  <!-- Footer -->
+  <footer class="footer-modern py-5">
+    <div class="container">
+      <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+          <h4 class="font-serif fw-bold text-white">Pastelería X7</h4>
+          <p class="small text-white-50">Empresa iqueña dedicada a la alta repostería y servicios de catering integral.</p>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+          <h6 class="fw-bold text-white mb-3">Enlaces Rápidos</h6>
+          <ul class="list-unstyled small">
+            <li><a th:href="@{/}" class="text-white-50 text-decoration-none">Inicio</a></li>
+            <li><a th:href="@{/catalogo}" class="text-white-50 text-decoration-none">Catálogo Digital</a></li>
+            <li><a th:href="@{/pedido}" class="text-white-50 text-decoration-none">Encargar Pedido</a></li>
+          </ul>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+          <h6 class="fw-bold text-white mb-3">Contacto</h6>
+          <p class="small text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i> Ica, Perú</p>
+          <p class="small text-white-50 mb-1"><i class="bi bi-whatsapp me-2"></i> +51 987 654 321</p>
+          <p class="small text-white-50"><i class="bi bi-envelope me-2"></i> contacto@pasteleriax7.com</p>
+        </div>
+      </div>
+      <div class="border-top border-secondary pt-3 text-center small text-white-50">
+        <p class="mb-0">&copy; 2026 Pastelería y Catering X7.</p>
+      </div>
+    </div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script th:src="@{/js/x7-auth.js}"></script>
+  <script th:src="@{/js/script.js}"></script>
+  <script th:src="@{/js/usuario.js}"></script>
 </body>
+
 </html>

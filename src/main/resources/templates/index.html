@@ -1,23 +1,59 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/layout :: head('Pastelería y Catering en Ica')}"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pastelería y Catering X7 | Ica</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
 
 <body>
 
-  <nav th:replace="~{fragments/layout :: navbar('inicio')}"></nav>
+  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between w-100 py-3">
+      <div class="d-flex align-items-center gap-3 order-1">
+        <div class="dropdown">
+          <a class="btn btn-outline-burgundy btn-sm rounded-circle" href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Usuario">
+            <i class="bi bi-person-circle fs-5"></i>
+          </a>
+          <ul class="dropdown-menu shadow border-0" id="authMenu"></ul>
+        </div>
+      </div>
 
-  <div class="container pt-3">
-    <div th:replace="~{fragments/layout :: alertas}"></div>
+      <div class="text-center order-2 flex-grow-1">
+        <a class="navbar-brand fs-3 m-0" th:href="@{/}">Pastelería <span>X7</span></a>
+      </div>
+
+      <div class="order-3 ms-2">
+        <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menú">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </div> 
+
+    <div class="collapse navbar-collapse justify-content-center pb-2" id="navbarNav">
+      <ul class="navbar-nav gap-lg-3 text-center">
+        <li class="nav-item"><a class="nav-link" th:href="@{/}">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/catalogo}">Catálogo</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/pedido}">Encargar Pedido</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/reservar}">Catering y Eventos</a></li>
+      </ul>
+    </div>
   </div>
+</nav>
 
   <main>
-    <!-- Hero -->
+    <!-- Hero Section -->
     <header class="py-5 bg-white border-bottom">
       <div class="container py-4">
         <div class="row align-items-center g-5">
           <div class="col-12 col-lg-6">
-            <span class="badge badge-gold mb-3"><i class="bi bi-star-fill"></i> Repostería Artesanal &amp; Catering en Ica</span>
+            <span class="badge badge-gold mb-3"><i class="bi bi-star-fill"></i> Repostería Artesanal & Catering en Ica</span>
             <h1 class="display-4 fw-bold text-dark mb-3">Arte, Sabor y Elegancia para tus Eventos</h1>
             <p class="lead text-muted mb-4">Diseñamos tortas temáticas personalizadas, bocaditos gourmet y banquetes integrales para hacer inolvidable cada celebración.</p>
             <div class="d-flex flex-wrap gap-3">
@@ -27,21 +63,19 @@
           </div>
           <div class="col-12 col-lg-6">
             <div class="position-relative">
-              <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800&amp;auto=format&amp;fit=crop&amp;q=80"
-                   class="img-fluid rounded-4 shadow-lg" alt="Torta Decorada X7">
+              <img src="https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800&auto=format&fit=crop&q=80" class="img-fluid rounded-4 shadow-lg" alt="Torta Decorada X7">
             </div>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Nosotros -->
+    <!-- Sección Nosotros -->
     <section class="py-5 bg-light border-bottom">
       <div class="container py-4">
         <div class="row align-items-center g-5">
           <div class="col-12 col-lg-5">
-            <img src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
-                 class="img-fluid rounded-4 shadow-sm" alt="Equipo de Pastelería X7">
+            <img src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80" class="img-fluid rounded-4 shadow-sm" alt="Equipo de Pastelería X7">
           </div>
           <div class="col-12 col-lg-7">
             <span class="text-uppercase fw-bold text-danger small tracking-wide">Sobre Nosotros</span>
@@ -73,7 +107,7 @@
       </div>
     </section>
 
-    <!-- Líneas de negocio -->
+    <!-- Categorías Destacadas -->
     <section class="py-5 bg-white border-top">
       <div class="container">
         <div class="text-center max-w-xl mx-auto mb-5">
@@ -84,8 +118,7 @@
         <div class="row g-4">
           <div class="col-12 col-md-6 col-lg-4">
             <div class="card card-modern h-100 p-3">
-              <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&amp;fit=crop&amp;w=600&amp;q=80"
-                   class="card-img-top img-fluid rounded-3" alt="Tortas Decoradas">
+              <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80" class="card-img-top img-fluid rounded-3" alt="Tortas Decoradas">
               <div class="card-body px-1">
                 <span class="badge badge-gold mb-2">Tortas Exclusivas</span>
                 <h5 class="fw-bold">Tortas Decoradas por Encargo</h5>
@@ -99,8 +132,7 @@
 
           <div class="col-12 col-md-6 col-lg-4">
             <div class="card card-modern h-100 p-3">
-              <img src="https://images.unsplash.com/photo-1559598467-f8b76c8155d0?auto=format&amp;fit=crop&amp;w=600&amp;q=80"
-                   class="card-img-top img-fluid rounded-3" alt="Bocaditos Temáticos">
+              <img src="https://images.unsplash.com/photo-1559598467-f8b76c8155d0?auto=format&fit=crop&w=600&q=80" class="card-img-top img-fluid rounded-3" alt="Bocaditos Temáticos">
               <div class="card-body px-1">
                 <span class="badge badge-gold mb-2">Bocaditos Gourmet</span>
                 <h5 class="fw-bold">Bocaditos Dulces y Salados</h5>
@@ -114,11 +146,10 @@
 
           <div class="col-12 col-md-6 col-lg-4">
             <div class="card card-modern h-100 p-3">
-              <img src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&amp;fit=crop&amp;w=600&amp;q=80"
-                   class="card-img-top img-fluid rounded-3" alt="Buffet Catering">
+              <img src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=600&q=80" class="card-img-top img-fluid rounded-3" alt="Buffet Catering">
               <div class="card-body px-1">
                 <span class="badge badge-gold mb-2">Eventos Integrales</span>
-                <h5 class="fw-bold">Servicio de Catering &amp; Buffet</h5>
+                <h5 class="fw-bold">Servicio de Catering & Buffet</h5>
                 <p class="card-text text-muted small">Atención profesional para banquetes corporativos y celebraciones familiares en Ica.</p>
               </div>
               <div class="card-footer bg-transparent border-0 px-1 pt-0">
@@ -131,8 +162,38 @@
     </section>
   </main>
 
-  <footer th:replace="~{fragments/layout :: footer}"></footer>
-  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <!-- Footer -->
+  <footer class="footer-modern py-5">
+    <div class="container">
+      <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+          <h4 class="font-serif fw-bold text-white">Pastelería X7</h4>
+          <p class="small text-white-50">Empresa iqueña dedicada a la alta repostería y servicios de catering integral.</p>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+          <h6 class="fw-bold text-white mb-3">Enlaces Rápidos</h6>
+          <ul class="list-unstyled small">
+            <li><a th:href="@{/}" class="text-white-50 text-decoration-none">Inicio</a></li>
+            <li><a th:href="@{/catalogo}" class="text-white-50 text-decoration-none">Catálogo Digital</a></li>
+            <li><a th:href="@{/pedido}" class="text-white-50 text-decoration-none">Encargar Pedido</a></li>
+          </ul>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+          <h6 class="fw-bold text-white mb-3">Contacto</h6>
+          <p class="small text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i> Ica, Perú</p>
+          <p class="small text-white-50 mb-1"><i class="bi bi-whatsapp me-2"></i> +51 987 654 321</p>
+          <p class="small text-white-50"><i class="bi bi-envelope me-2"></i> contacto@pasteleriax7.com</p>
+        </div>
+      </div>
+      <div class="border-top border-secondary pt-3 text-center small text-white-50">
+        <p class="mb-0">&copy; 2026 Pastelería y Catering X7.</p>
+      </div>
+    </div>
+  </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script th:src="@{/js/x7-auth.js}"></script>
+  <script th:src="@{/js/script.js}"></script>
 </body>
+
 </html>

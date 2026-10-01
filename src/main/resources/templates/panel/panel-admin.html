@@ -1,177 +1,89 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/layout :: head('Panel Administrador')}"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Administrador | Pastelería X7</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
 
 <body>
 
-  <nav th:replace="~{fragments/layout :: navbarAdmin}"></nav>
+  <!-- Topbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand fw-bold" href="#">X7 <span>Intranet Admin</span></a>
+      <div class="d-flex align-items-center">
+        <span class="text-white me-3 small"><i class="bi bi-person-circle me-1"></i> Administrador</span>
+        <a href="#" id="btnSalirAdmin" class="btn btn-outline-light btn-sm"><i class="bi bi-power"></i> Salir</a>
+      </div>
+    </div>
+  </nav>
 
   <div class="container-fluid py-4 px-4">
-
-    <div th:replace="~{fragments/layout :: alertas}"></div>
-
     <div class="mb-4">
       <h2 class="fw-bold font-serif mb-0">Panel de Administración</h2>
-      <p class="text-muted small mb-0">Gestiona los pedidos, el catálogo de productos y las cuentas de clientes.</p>
-    </div>
-
-    <!-- Indicadores -->
-    <div class="row g-3 mb-4">
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">Pedidos</span>
-          <span class="fs-3 fw-bold" th:text="${totalPedidos}">0</span>
-        </div>
-      </div>
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">Pendientes</span>
-          <span class="fs-3 fw-bold text-warning" th:text="${totalPendientes}">0</span>
-        </div>
-      </div>
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">En preparación</span>
-          <span class="fs-3 fw-bold text-info" th:text="${totalEnPreparacion}">0</span>
-        </div>
-      </div>
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">Entregados</span>
-          <span class="fs-3 fw-bold text-success" th:text="${totalEntregados}">0</span>
-        </div>
-      </div>
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">Productos</span>
-          <span class="fs-3 fw-bold" th:text="${totalProductos}">0</span>
-        </div>
-      </div>
-      <div class="col-6 col-lg-2">
-        <div class="card card-modern p-3 text-center h-100">
-          <span class="small text-muted">Clientes</span>
-          <span class="fs-3 fw-bold" th:text="${totalClientes}">0</span>
-        </div>
-      </div>
+      <p class="text-muted small mb-0">Gestiona los pedidos, cotizaciones y el catálogo de productos.</p>
     </div>
 
     <!-- Pestañas -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link" th:classappend="${tab == 'pedidos'} ? 'active'"
-                data-bs-toggle="tab" data-bs-target="#tabPedidos" type="button" role="tab">
+        <button class="nav-link active" id="tab-btn-pedidos" data-bs-toggle="tab" data-bs-target="#tabPedidos" type="button" role="tab">
           <i class="bi bi-receipt me-1"></i> Pedidos
         </button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" th:classappend="${tab == 'productos'} ? 'active'"
-                data-bs-toggle="tab" data-bs-target="#tabProductos" type="button" role="tab">
+        <button class="nav-link" id="tab-btn-productos" data-bs-toggle="tab" data-bs-target="#tabProductos" type="button" role="tab">
           <i class="bi bi-box-seam me-1"></i> Productos
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" th:classappend="${tab == 'usuarios'} ? 'active'"
-                data-bs-toggle="tab" data-bs-target="#tabUsuarios" type="button" role="tab">
-          <i class="bi bi-people me-1"></i> Clientes
         </button>
       </li>
     </ul>
 
     <div class="tab-content">
-
-      <!-- ===================== PEDIDOS ===================== -->
-      <div class="tab-pane fade" th:classappend="${tab == 'pedidos'} ? 'show active'" id="tabPedidos" role="tabpanel">
-
-        <!-- Filtros: consulta a la base de datos vía parámetros GET -->
-        <form th:action="@{/admin/panel}" method="get" class="card card-modern p-3 mb-4">
-          <input type="hidden" name="tab" value="pedidos">
-          <div class="row g-3 align-items-end">
+      <!-- ===================== TAB: PEDIDOS ===================== -->
+      <div class="tab-pane fade show active" id="tabPedidos" role="tabpanel">
+        <!-- Filtros -->
+        <div class="card card-modern p-3 mb-4">
+          <div class="row g-3">
             <div class="col-12 col-md-3">
-              <label for="estado" class="form-label small fw-semibold">Estado</label>
-              <select id="estado" name="estado" class="form-select">
-                <option value="">Todos los estados</option>
-                <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"
-                        th:selected="${e == filtroEstado}">Estado</option>
+              <select class="form-select">
+                <option value="">Todos los Estados</option>
+                <option>PENDIENTE</option>
+                <option>EN PREPARACIÓN</option>
+                <option>ENTREGADO</option>
               </select>
             </div>
             <div class="col-12 col-md-6">
-              <label for="q" class="form-label small fw-semibold">Buscar</label>
-              <input type="text" id="q" name="q" class="form-control" th:value="${filtroTexto}"
-                     placeholder="Código, cliente o producto...">
+              <input type="text" class="form-control" placeholder="Buscar por nombre de cliente o código de pedido...">
             </div>
-            <div class="col-12 col-md-3 d-flex gap-2">
-              <button type="submit" class="btn btn-outline-burgundy flex-fill">
-                <i class="bi bi-funnel me-1"></i> Filtrar
-              </button>
-              <a th:href="@{/admin/panel(tab='pedidos')}" class="btn btn-light border"
-                 title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+            <div class="col-12 col-md-3">
+              <button class="btn btn-outline-burgundy w-100"><i class="bi bi-funnel me-1"></i> Filtrar</button>
             </div>
           </div>
-        </form>
+        </div>
 
+        <!-- Tabla Responsiva de Pedidos -->
         <div class="card card-modern">
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+<table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
                   <th>Código</th>
                   <th>Cliente</th>
                   <th>Detalle del Pedido</th>
-                  <th>Entrega</th>
-                  <th>Monto</th>
-                  <th style="min-width:170px;">Estado</th>
+                  <th>Fecha Entrega</th>
+                  <th>Monto Total</th>
+                  <th>Estado</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr th:each="p : ${pedidos}">
-                  <td class="fw-bold" th:text="${p.codigo}">#PED-0001</td>
-                  <td>
-                    <div class="fw-semibold" th:text="${p.cliente.nombre}">Cliente</div>
-                    <div class="small text-muted" th:text="${p.cliente.email}">correo</div>
-                  </td>
-                  <td>
-                    <span class="fw-semibold" th:text="${p.tipo} + ': ' + ${p.producto}">Pedido</span>
-                    <div class="small text-muted" th:if="${p.detalle}" th:text="${p.detalle}">Detalle</div>
-                    <div class="small text-muted" th:if="${p.telefono}">
-                      <i class="bi bi-telephone me-1"></i><span th:text="${p.telefono}">999</span>
-                    </div>
-                  </td>
-                  <td th:text="${#temporals.format(p.fechaEntrega, 'dd/MM/yyyy')}">01/01/2026</td>
-                  <td class="fw-bold">
-                    <span th:if="${p.monto != null}"
-                          th:text="'S/ ' + ${#numbers.formatDecimal(p.monto, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</span>
-                    <span th:unless="${p.monto != null}" class="text-muted fw-normal">Por confirmar</span>
-                  </td>
-
-                  <!-- UPDATE del estado mediante PUT -->
-                  <td>
-                    <form th:action="@{/admin/pedidos/{id}/estado(id=${p.id})}" th:method="put" class="m-0">
-                      <select name="estado" class="form-select form-select-sm js-auto-submit">
-                        <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"
-                                th:selected="${e == p.estado}">Estado</option>
-                      </select>
-                    </form>
-                    <span class="badge mt-1" th:classappend="${p.estado.badge}"
-                          th:text="${p.estado.etiqueta}">Estado</span>
-                  </td>
-
-                  <!-- DELETE del pedido -->
-                  <td class="text-center">
-                    <form th:action="@{/admin/pedidos/{id}(id=${p.id})}" th:method="delete" class="m-0 d-inline">
-                      <button type="submit" class="btn btn-sm btn-danger" title="Eliminar pedido"
-                              th:attr="data-confirmar='¿Seguro que deseas eliminar el pedido ' + ${p.codigo} + '?'">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-
-                <tr th:if="${#lists.isEmpty(pedidos)}">
-                  <td colspan="7" class="text-center text-muted py-4">
-                    No hay pedidos que coincidan con el filtro aplicado.
-                  </td>
+              <tbody id="tablaPedidosAdmin">
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">Cargando pedidos...</td>
                 </tr>
               </tbody>
             </table>
@@ -179,124 +91,99 @@
         </div>
       </div>
 
-      <!-- ===================== PRODUCTOS ===================== -->
-      <div class="tab-pane fade" th:classappend="${tab == 'productos'} ? 'show active'" id="tabProductos" role="tabpanel">
+      <!-- ===================== TAB: PRODUCTOS ===================== -->
+      <div class="tab-pane fade" id="tabProductos" role="tabpanel">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h5 class="fw-bold font-serif mb-0">Catálogo de Productos</h5>
-            <p class="text-muted small mb-0">
-              Estos productos se muestran en el Catálogo Digital y en el formulario de pedidos.
-            </p>
+            <p class="text-muted small mb-0">Estos productos se muestran en el Catálogo Digital y en el formulario de pedidos.</p>
           </div>
-          <a th:href="@{/admin/productos/nuevo}" class="btn btn-terracotta">
+          <button class="btn btn-terracotta" data-bs-toggle="modal" data-bs-target="#modalProducto">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
-          </a>
+          </button>
         </div>
 
         <div class="card card-modern">
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+<table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
                   <th style="width:70px;">Foto</th>
                   <th>Nombre</th>
                   <th>Categoría</th>
                   <th>Precio</th>
-                  <th>Descripción</th>
-                  <th class="text-center" style="width:120px;">Acciones</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr th:each="p : ${productos}">
-                  <td>
-                    <img th:src="${p.imagen} ?: 'https://via.placeholder.com/50?text=X7'" th:alt="${p.nombre}"
-                         class="rounded-3" style="width:50px;height:50px;object-fit:cover;">
-                  </td>
-                  <td class="fw-bold" th:text="${p.nombre}">Producto</td>
-                  <td><span class="badge badge-gold" th:text="${p.categoria}">Categoría</span></td>
-                  <td class="fw-bold"
-                      th:text="'S/ ' + ${#numbers.formatDecimal(p.precio, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
-                  <td class="small text-muted" th:text="${#strings.abbreviate(p.descripcion, 70)}">Descripción</td>
-                  <td class="text-center text-nowrap">
-                    <a th:href="@{/admin/productos/{id}/editar(id=${p.id})}"
-                       class="btn btn-sm btn-outline-burgundy" title="Editar producto">
-                      <i class="bi bi-pencil"></i>
-                    </a>
-                    <form th:action="@{/admin/productos/{id}(id=${p.id})}" th:method="delete" class="m-0 d-inline">
-                      <button type="submit" class="btn btn-sm btn-danger" title="Eliminar producto"
-                              th:attr="data-confirmar='¿Seguro que deseas eliminar ' + ${p.nombre} + ' del catálogo?'">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-
-                <tr th:if="${#lists.isEmpty(productos)}">
-                  <td colspan="6" class="text-center text-muted py-4">
-                    Todavía no hay productos en el catálogo.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===================== CLIENTES ===================== -->
-      <div class="tab-pane fade" th:classappend="${tab == 'usuarios'} ? 'show active'" id="tabUsuarios" role="tabpanel">
-        <div class="mb-3">
-          <h5 class="fw-bold font-serif mb-0">Cuentas Registradas</h5>
-          <p class="text-muted small mb-0">Listado de usuarios de la plataforma.</p>
-        </div>
-
-        <div class="card card-modern">
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light">
+              <tbody id="tablaProductosAdmin">
                 <tr>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>Teléfono</th>
-                  <th>Dirección</th>
-                  <th>Rol</th>
-                  <th class="text-center" style="width:90px;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr th:each="u : ${usuarios}">
-                  <td class="fw-bold" th:text="${u.nombre}">Nombre</td>
-                  <td th:text="${u.email}">correo</td>
-                  <td th:text="${u.telefono} ?: '—'">—</td>
-                  <td class="small text-muted" th:text="${u.direccion} ?: '—'">—</td>
-                  <td>
-                    <span class="badge"
-                          th:classappend="${u.esAdministrador()} ? 'bg-dark' : 'bg-secondary'"
-                          th:text="${u.rol.etiqueta}">Rol</span>
-                  </td>
-                  <td class="text-center">
-                    <form th:action="@{/admin/usuarios/{id}(id=${u.id})}" th:method="delete" class="m-0 d-inline">
-                      <button type="submit" class="btn btn-sm btn-danger" title="Eliminar cuenta"
-                              th:disabled="${u.esAdministrador()}"
-                              th:attr="data-confirmar='¿Seguro que deseas eliminar la cuenta de ' + ${u.nombre} + '?'">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-
-                <tr th:if="${#lists.isEmpty(usuarios)}">
-                  <td colspan="6" class="text-center text-muted py-4">No hay usuarios registrados.</td>
+                  <td colspan="5" class="text-center text-muted py-4">Cargando productos...</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
-  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <!-- Modal: Nuevo Producto -->
+  <div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="formProducto">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold font-serif"><i class="bi bi-box-seam me-2 text-danger"></i>Nuevo Producto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div id="productoMensaje" class="alert alert-danger d-none small" role="alert"></div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Nombre del Producto *</label>
+                <input type="text" id="prodNombre" class="form-control" placeholder="Ej. Torta Red Velvet Clásica" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Categoría *</label>
+                <select id="prodCategoria" class="form-select" required>
+                  <option value="" selected disabled>Seleccione...</option>
+                  <option>Tortas</option>
+                  <option>Bocaditos</option>
+                  <option>Buffets</option>
+                  <option>Otros</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Precio (S/) *</label>
+                <input type="number" id="prodPrecio" class="form-control" placeholder="Ej. 95.00" min="0" step="0.01" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Etiqueta / Badge</label>
+                <input type="text" id="prodEtiqueta" class="form-control" placeholder="Ej. Torta Fina">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Imagen (URL)</label>
+                <input type="url" id="prodImagen" class="form-control" placeholder="https://...">
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Descripción *</label>
+                <textarea id="prodDescripcion" class="form-control" rows="3" placeholder="Breve descripción del producto..." required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-burgundy" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-terracotta"><i class="bi bi-check-circle me-1"></i> Guardar Producto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script th:src="@{/js/x7-auth.js}"></script>
+  <script th:src="@{/js/script.js}"></script>
+  <script th:src="@{/js/sistema.js}"></script>
 </body>
+
 </html>
