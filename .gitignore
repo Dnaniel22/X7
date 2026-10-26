@@ -35,8 +35,3 @@ build/
 ### OS ###
 .DS_Store
 Thumbs.db
-
-### Base de datos H2 (se regenera al arrancar) ###
-/data/
-*.mv.db
-*.trace.db
