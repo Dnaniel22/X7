@@ -30,7 +30,7 @@ function filtrarCatalogo() {
   const tarjetas = Array.from(grilla.querySelectorAll(".producto-card"));
   const buscador = document.getElementById("buscadorProductos");
   const sinResultados = document.getElementById("sinResultados");
-  const botones = Array.from(document.querySelectorAll("[data-categoria]"));
+  const botones = Array.from(document.querySelectorAll("button[data-categoria]"));
   let categoriaActiva = "";
 
   function aplicar() {
