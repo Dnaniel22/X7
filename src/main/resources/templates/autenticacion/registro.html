@@ -19,55 +19,75 @@
             </p>
           </div>
 
-          <div th:if="${error}" class="alert alert-danger text-start small" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Error</span>
-          </div>
+          <!--
+            El formulario se enlaza al objeto Usuario con th:object.
+            novalidate: la validación la hace Spring Validator en el servidor (@Valid + BindingResult)
+            y cada mensaje aparece debajo de su campo con th:errors.
+          -->
+          <form th:action="@{/registro}" th:object="${usuario}" method="post" novalidate>
 
-          <!-- El formulario se enlaza al objeto Usuario con th:object -->
-          <form th:action="@{/registro}" th:object="${usuario}" method="post">
+            <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger small" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>Revisa los campos marcados en rojo.
+            </div>
+
             <div class="row g-3 mb-3 text-start">
               <div class="col-12">
                 <label for="nombre" class="form-label small fw-semibold">Nombre Completo *</label>
                 <input type="text" id="nombre" th:field="*{nombre}" class="form-control"
-                       placeholder="Ej. María Fernández" required>
+                       th:classappend="${#fields.hasErrors('nombre')} ? 'is-invalid'"
+                       placeholder="Ej. María Fernández" maxlength="100" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">Error</div>
               </div>
 
               <div class="col-12">
                 <label for="email" class="form-label small fw-semibold">Correo Electrónico *</label>
                 <input type="email" id="email" th:field="*{email}" class="form-control"
-                       placeholder="maria@correo.com" required>
+                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
+                       placeholder="maria@correo.com" maxlength="120" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="telefono" class="form-label small fw-semibold">Teléfono / WhatsApp</label>
                 <input type="tel" id="telefono" th:field="*{telefono}" class="form-control"
-                       placeholder="987654321">
+                       th:classappend="${#fields.hasErrors('telefono')} ? 'is-invalid'"
+                       placeholder="987654321" maxlength="9" inputmode="numeric">
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="direccion" class="form-label small fw-semibold">Dirección (Ica)</label>
                 <input type="text" id="direccion" th:field="*{direccion}" class="form-control"
-                       placeholder="Urb. Las Flores Mz. A">
+                       th:classappend="${#fields.hasErrors('direccion')} ? 'is-invalid'"
+                       placeholder="Urb. Las Flores Mz. A" maxlength="150">
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('direccion')}" th:errors="*{direccion}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="password" class="form-label small fw-semibold">Contraseña *</label>
-                <input type="password" id="password" name="password" class="form-control"
-                       placeholder="Mínimo 6 caracteres" minlength="6" required>
+                <input type="password" id="password" th:field="*{password}" class="form-control"
+                       th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                       placeholder="Mínimo 6 caracteres" minlength="6" maxlength="60" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
-                <label for="password2" class="form-label small fw-semibold">Confirmar Contraseña *</label>
-                <input type="password" id="password2" name="password2" class="form-control"
-                       placeholder="••••••••" minlength="6" required>
+                <label for="confirmarPassword" class="form-label small fw-semibold">Confirmar Contraseña *</label>
+                <input type="password" id="confirmarPassword" th:field="*{confirmarPassword}" class="form-control"
+                       th:classappend="${#fields.hasErrors('confirmarPassword')} ? 'is-invalid'"
+                       placeholder="••••••••" minlength="6" maxlength="60" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('confirmarPassword')}" th:errors="*{confirmarPassword}">Error</div>
               </div>
             </div>
 
             <div class="form-check mb-4 text-start">
-              <input class="form-check-input" type="checkbox" id="terminos" required>
+              <input class="form-check-input" type="checkbox" id="terminos" name="terminos"
+                     th:classappend="${#fields.hasGlobalErrors()} ? 'is-invalid'"
+                     th:checked="${param.terminos != null}" required>
               <label class="form-check-label small text-muted" for="terminos">
                 Acepto los términos y condiciones y el uso de mis datos para procesar pedidos.
               </label>
+              <div class="invalid-feedback d-block" th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</div>
             </div>
 
             <button class="btn btn-terracotta w-100 py-3 fw-bold mb-3" type="submit">

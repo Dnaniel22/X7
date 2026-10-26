@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <!-- Grilla de productos renderizada por Thymeleaf -->
+    <!-- Grilla de productos renderizada por Thymeleaf con los registros de la tabla producto -->
     <div class="row g-4" id="grillaProductos">
       <div class="col-12 col-md-6 col-lg-4 producto-card" th:each="p : ${productos}"
            th:attr="data-categoria=${p.categoria},data-texto=${p.nombre + ' ' + p.descripcion + ' ' + p.categoria}">
@@ -54,7 +54,7 @@
             <p class="small text-muted" th:text="${p.descripcion}">Descripción</p>
           </div>
           <div class="card-footer bg-transparent border-0 px-1 pt-0">
-            <a class="btn btn-terracotta w-100" th:href="@{/pedido(producto=${p.nombre})}">
+            <a class="btn btn-terracotta w-100" th:href="@{/pedido(producto=${p.id})}">
               <i class="bi bi-cart-plus me-1"></i> Encargar
             </a>
           </div>

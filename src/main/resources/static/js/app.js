@@ -71,7 +71,7 @@ function filtrarCatalogo() {
 
 /* ---------- Pedido: total estimado (el monto real lo calcula el servidor) ---------- */
 function estimarTotalPedido() {
-  const selectProducto = document.getElementById("producto");
+  const selectProducto = document.getElementById("productoId");
   const selectTamano = document.getElementById("tamano");
   const inputCantidad = document.getElementById("cantidad");
   const salida = document.getElementById("totalEstimado");
@@ -117,9 +117,21 @@ function previsualizarImagen() {
 
   if (!campo || !contenedor || !imagen) return;
 
+  // Solo se muestra cuando la imagen realmente carga; si la URL está rota, se oculta.
+  imagen.addEventListener("load", function () {
+    contenedor.classList.remove("d-none");
+  });
+  imagen.addEventListener("error", function () {
+    contenedor.classList.add("d-none");
+  });
+
   campo.addEventListener("input", function () {
     const url = campo.value.trim();
-    imagen.src = url;
-    contenedor.classList.toggle("d-none", url === "");
+    if (url === "") {
+      contenedor.classList.add("d-none");
+      imagen.removeAttribute("src");
+    } else {
+      imagen.src = url;
+    }
   });
 }
