@@ -19,14 +19,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Arma las respuestas JSON de error de la API con un formato único:
- * { "timestamp", "status", "error", "mensaje", "errores": { "campo": "mensaje" } }
- */
 @Component
 public class ApiRespuestas {
 
-    /** Si un campo tiene varios errores, se informa primero el de "obligatorio". */
     private static final Set<String> PRIORITARIOS = Set.of("NotBlank", "NotNull");
 
     private final MessageSource messageSource;
@@ -39,7 +34,6 @@ public class ApiRespuestas {
         return ResponseEntity.status(status).body(cuerpo(status, mensaje));
     }
 
-    /** 400 Bad Request con el mensaje de cada campo inválido. */
     public ResponseEntity<Map<String, Object>> errorValidacion(BindingResult result) {
         Map<String, String> errores = new LinkedHashMap<>();
         result.getFieldErrors().stream()
@@ -54,10 +48,6 @@ public class ApiRespuestas {
         return ResponseEntity.badRequest().body(cuerpo);
     }
 
-    /**
-     * Comprueba la sesión antes de una operación de la API.
-     * @return null si el usuario puede continuar; si no, la respuesta 401 o 403.
-     */
     public ResponseEntity<Map<String, Object>> verificarRol(HttpSession session, Rol rolRequerido) {
         Usuario usuario = SesionUsuario.actual(session);
         if (usuario == null) {

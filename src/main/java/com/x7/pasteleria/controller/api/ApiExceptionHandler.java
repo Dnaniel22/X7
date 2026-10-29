@@ -11,11 +11,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.Arrays;
 import java.util.Map;
 
-/**
- * Errores de la API que ocurren antes de entrar al controlador
- * (JSON mal escrito, un texto donde va un número, un estado inexistente...).
- * Se responden con 400 y un mensaje claro en lugar de la página de error por defecto.
- */
 @RestControllerAdvice(basePackageClasses = ApiExceptionHandler.class)
 public class ApiExceptionHandler {
 

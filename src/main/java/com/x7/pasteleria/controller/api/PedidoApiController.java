@@ -26,10 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Pedidos por API REST.
- * El administrador ve todos y puede actualizarlos o eliminarlos; el cliente solo consulta los suyos.
- */
 @RestController
 @RequestMapping("/api/pedidos")
 public class PedidoApiController {
@@ -42,7 +38,6 @@ public class PedidoApiController {
         this.respuestas = respuestas;
     }
 
-    /** GET /api/pedidos?estado=PENDIENTE → 200 OK, 400 si el estado no existe, 401 sin sesión */
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(required = false) String estado, HttpSession session) {
         ResponseEntity<Map<String, Object>> sinSesion = respuestas.verificarRol(session, null);
@@ -67,7 +62,6 @@ public class PedidoApiController {
         return ResponseEntity.ok(pedidos);
     }
 
-    /** GET /api/pedidos/{id} → 200 OK, 401, 403 si es de otro cliente, 404 */
     @GetMapping("/{id}")
     public ResponseEntity<?> buscar(@PathVariable Long id, HttpSession session) {
         ResponseEntity<Map<String, Object>> sinSesion = respuestas.verificarRol(session, null);
@@ -86,7 +80,6 @@ public class PedidoApiController {
         return ResponseEntity.ok(pedido.get());
     }
 
-    /** PUT /api/pedidos/{id} con {"estado": "...", "monto": 350.00} → 200 OK, 400, 404 */
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizar(@PathVariable Long id,
                                         @Valid @RequestBody ActualizarPedidoRequest datos,
@@ -112,7 +105,6 @@ public class PedidoApiController {
         return ResponseEntity.ok(pedido.get());
     }
 
-    /** DELETE /api/pedidos/{id} → 204 No Content o 404 */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id, HttpSession session) {
         ResponseEntity<Map<String, Object>> sinPermiso = respuestas.verificarRol(session, Rol.ADMINISTRADOR);

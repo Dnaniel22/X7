@@ -24,10 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * CRUD REST de productos.
- * Consultar es público; registrar, actualizar y eliminar requieren sesión de administrador.
- */
 @RestController
 @RequestMapping("/api/productos")
 public class ProductoApiController {
@@ -44,14 +40,12 @@ public class ProductoApiController {
         this.respuestas = respuestas;
     }
 
-    /** GET /api/productos?nombre=torta&categoria=Tortas → 200 OK */
     @GetMapping
     public List<Producto> listar(@RequestParam(required = false) String nombre,
                                  @RequestParam(required = false) String categoria) {
         return productoRepository.buscar(nombre, categoria);
     }
 
-    /** GET /api/productos/{id} → 200 OK o 404 Not Found */
     @GetMapping("/{id}")
     public ResponseEntity<?> buscar(@PathVariable Long id) {
         Optional<Producto> producto = productoRepository.findById(id);
@@ -61,7 +55,6 @@ public class ProductoApiController {
         return ResponseEntity.ok(producto.get());
     }
 
-    /** POST /api/productos → 201 Created, 400 Bad Request o 409 Conflict */
     @PostMapping
     public ResponseEntity<?> registrar(@Valid @RequestBody Producto producto,
                                        BindingResult result,
@@ -85,7 +78,6 @@ public class ProductoApiController {
         return ResponseEntity.created(URI.create("/api/productos/" + guardado.getId())).body(guardado);
     }
 
-    /** PUT /api/productos/{id} → 200 OK, 400, 404 o 409 */
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizar(@PathVariable Long id,
                                         @Valid @RequestBody Producto datos,
@@ -114,7 +106,6 @@ public class ProductoApiController {
         return ResponseEntity.ok(productoRepository.save(producto));
     }
 
-    /** DELETE /api/productos/{id} → 204 No Content, 404 o 409 si tiene pedidos */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminar(@PathVariable Long id, HttpSession session) {
         ResponseEntity<Map<String, Object>> sinPermiso = respuestas.verificarRol(session, Rol.ADMINISTRADOR);

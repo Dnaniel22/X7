@@ -11,11 +11,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
-/**
- * Datos del formulario "Encargar Pedido".
- * Se usa una clase aparte porque el formulario tiene campos (tamaño, cantidad, colores)
- * que no son columnas de la tabla pedido: el controlador los combina en el detalle.
- */
 public class PedidoForm {
 
     @NotBlank(message = "{pedido.contacto.obligatorio}")
@@ -30,7 +25,6 @@ public class PedidoForm {
     @Size(min = 5, max = 200, message = "{pedido.direccion.tamano}")
     private String direccion;
 
-    /** Id del producto del catálogo; 0 significa "Otro / Personalizado". */
     @NotNull(message = "{pedido.producto.obligatorio}")
     private Long productoId;
 
@@ -39,7 +33,6 @@ public class PedidoForm {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate fechaEntrega;
 
-    /** Solo para tortas: el controlador lo exige cuando el producto es de la categoría "Tortas". */
     private String tamano;
 
     @NotNull(message = "{pedido.cantidad.obligatoria}")

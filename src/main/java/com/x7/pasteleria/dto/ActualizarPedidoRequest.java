@@ -7,10 +7,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
-/**
- * Cuerpo JSON de PUT /api/pedidos/{id}: el administrador actualiza el estado
- * y, si corresponde, confirma el monto de una cotización.
- */
 public record ActualizarPedidoRequest(
         @NotNull(message = "{pedido.estado.obligatorio}")
         EstadoPedido estado,

@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Datos que el cliente puede actualizar desde "Mis Datos". El correo y la contraseña no se editan aquí. */
 public class PerfilForm {
 
     @NotBlank(message = "{usuario.nombre.obligatorio}")

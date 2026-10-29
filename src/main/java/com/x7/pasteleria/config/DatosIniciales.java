@@ -24,19 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Carga los datos de partida la primera vez que la aplicación se conecta a una base vacía.
- * Si las tablas ya tienen registros no hace nada, así que los datos existentes se conservan.
- *
- * Además carga, una sola vez, datos de demostración (más productos, clientes y pedidos en
- * distintos estados) para que el catálogo y los paneles no se vean vacíos.
- */
 @Component
 public class DatosIniciales implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DatosIniciales.class);
 
-    /** Si este cliente ya existe, los datos de demostración ya se cargaron y no se repiten. */
     private static final String CLIENTE_DEMO = "rosa.quispe@correo.com";
 
     private static final String IMAGEN = "https://images.unsplash.com/%s?auto=format&fit=crop&w=900&q=80";
@@ -186,14 +178,12 @@ public class DatosIniciales implements CommandLineRunner {
         return String.format(IMAGEN, foto);
     }
 
-    /** Devuelve el cliente con ese correo; si no existe, lo registra. */
     private Usuario cliente(String nombre, String email, String telefono, String direccion) {
         return usuarioRepository.findByEmailIgnoreCase(email)
                 .orElseGet(() -> usuarioRepository.save(
                         new Usuario(nombre, email, telefono, direccion, "123456", Rol.CLIENTE)));
     }
 
-    /** Pedido de un producto del catálogo. Devuelve null si el cliente o el producto ya no existen. */
     private Pedido pedido(Usuario cliente, Producto producto, String detalle, String monto,
                           EstadoPedido estado, int diasDesdeRegistro, int diasHastaEntrega) {
         if (producto == null) {
@@ -202,13 +192,11 @@ public class DatosIniciales implements CommandLineRunner {
         return base(cliente, TipoPedido.PEDIDO, producto, detalle, monto, estado, diasDesdeRegistro, diasHastaEntrega);
     }
 
-    /** Pedido de algo que no está en el catálogo: el monto queda por confirmar. */
     private Pedido personalizado(Usuario cliente, String detalle, EstadoPedido estado,
                                  int diasDesdeRegistro, int diasHastaEntrega) {
         return base(cliente, TipoPedido.PEDIDO, null, detalle, null, estado, diasDesdeRegistro, diasHastaEntrega);
     }
 
-    /** Cotización de catering: no tiene producto y se entrega en el lugar del evento. */
     private Pedido catering(Usuario cliente, String tipoEvento, String lugar, String detalle, String monto,
                             EstadoPedido estado, int diasDesdeRegistro, int diasHastaEntrega) {
         Pedido pedido = base(cliente, TipoPedido.CATERING, null, detalle, monto, estado,

@@ -11,7 +11,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 
-/** Datos del formulario "Cotización de Catering y Buffets". */
 public class CateringForm {
 
     @NotBlank(message = "{catering.tipoEvento.obligatorio}")

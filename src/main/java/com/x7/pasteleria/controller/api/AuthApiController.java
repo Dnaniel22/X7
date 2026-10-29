@@ -17,11 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Optional;
 
-/**
- * Inicio de sesión para la API (por ejemplo, desde Postman).
- * Usa la misma HttpSession que las vistas: Postman guarda la cookie JSESSIONID
- * y la envía en las siguientes peticiones.
- */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthApiController {
@@ -34,7 +29,6 @@ public class AuthApiController {
         this.respuestas = respuestas;
     }
 
-    /** POST /api/auth/login → 200 OK con el usuario, 400 si faltan datos, 401 si no coinciden */
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest datos, BindingResult result, HttpSession session) {
         if (result.hasErrors()) {
@@ -51,7 +45,6 @@ public class AuthApiController {
         return ResponseEntity.ok(usuario.get());   // la contraseña no se incluye (WRITE_ONLY)
     }
 
-    /** GET /api/auth/sesion → 200 OK con el usuario en sesión o 401 */
     @GetMapping("/sesion")
     public ResponseEntity<?> sesion(HttpSession session) {
         Usuario usuario = SesionUsuario.actual(session);
@@ -61,7 +54,6 @@ public class AuthApiController {
         return ResponseEntity.ok(usuario);
     }
 
-    /** POST /api/auth/logout → 204 No Content */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpSession session) {
         session.invalidate();

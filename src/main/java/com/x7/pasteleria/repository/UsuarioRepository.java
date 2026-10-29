@@ -19,11 +19,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     long countByRol(Rol rol);
 
-    /**
-     * Clientes con la cantidad de pedidos de cada uno.
-     * Recorre la relación @OneToMany (u.pedidos) con un LEFT JOIN para incluir
-     * también a los clientes que todavía no tienen pedidos.
-     */
     @Query("""
             select new com.x7.pasteleria.dto.ClienteResumen(
                        u.id, u.nombre, u.email, u.telefono, u.direccion, count(p))
