@@ -34,8 +34,11 @@ public class PedidoController {
     /** Valor del desplegable para un producto que no está en el catálogo. */
     private static final long PRODUCTO_PERSONALIZADO = 0L;
 
+    /** El tamaño (porciones) solo tiene sentido en las tortas; los demás productos se piden por cantidad. */
+    private static final String CATEGORIA_CON_TAMANO = "Tortas";
+
     /**
-     * Cada tamaño multiplica el precio base del producto.
+     * Cada tamaño multiplica el precio base de una torta.
      * Es un LinkedHashMap para que el desplegable respete este orden.
      */
     private static final Map<String, BigDecimal> TAMANOS = new LinkedHashMap<>();
@@ -129,8 +132,16 @@ public class PedidoController {
                 result.rejectValue("productoId", "pedido.producto.noDisponible");
             }
         }
-        if (form.getTamano() != null && !TAMANOS.containsKey(form.getTamano())) {
-            result.rejectValue("tamano", "pedido.tamano.valido");
+        // El tamaño es obligatorio en las tortas; en bocaditos, buffets y personalizados no aplica.
+        boolean esTorta = producto != null && CATEGORIA_CON_TAMANO.equals(producto.getCategoria());
+        if (esTorta) {
+            if (form.getTamano() == null) {
+                result.rejectValue("tamano", "pedido.tamano.obligatorio");
+            } else if (!TAMANOS.containsKey(form.getTamano())) {
+                result.rejectValue("tamano", "pedido.tamano.valido");
+            }
+        } else {
+            form.setTamano(null);
         }
         if (form.getFechaEntrega() != null && form.getFechaEntrega().isAfter(LocalDate.now().plusYears(1))) {
             result.rejectValue("fechaEntrega", "pedido.fecha.lejana");
@@ -153,7 +164,7 @@ public class PedidoController {
                 form.getCantidad() > 1 ? "Cantidad: " + form.getCantidad() : "",
                 form.getColores(),
                 form.getDetalles()));
-        // Producto del catálogo: precio base × factor del tamaño × cantidad. Personalizado: por confirmar (NULL).
+        // Torta: precio × factor del tamaño × cantidad. Otros productos: precio × cantidad. Personalizado: por confirmar (NULL).
         pedido.setMonto(producto == null ? null : calcularMonto(producto, form.getTamano(), form.getCantidad()));
 
         Pedido guardado = guardarConCodigo(pedido);
@@ -227,8 +238,9 @@ public class PedidoController {
     }
 
     private BigDecimal calcularMonto(Producto producto, String tamano, int cantidad) {
+        BigDecimal factor = tamano == null ? BigDecimal.ONE : TAMANOS.get(tamano);
         return producto.getPrecio()
-                .multiply(TAMANOS.get(tamano))
+                .multiply(factor)
                 .multiply(BigDecimal.valueOf(cantidad))
                 .setScale(2, RoundingMode.HALF_UP);
     }

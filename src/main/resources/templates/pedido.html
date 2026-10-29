@@ -66,7 +66,7 @@
                   <!-- Los productos salen de la tabla producto (solo los disponibles) -->
                   <option th:each="p : ${productos}"
                           th:value="${p.id}"
-                          th:attr="data-precio=${p.precio}"
+                          th:attr="data-precio=${p.precio},data-categoria=${p.categoria}"
                           th:text="${p.nombre} + ' — S/ ' + ${#numbers.formatDecimal(p.precio, 1, 'COMMA', 2, 'POINT')}">
                     Producto
                   </option>
@@ -83,7 +83,8 @@
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('fechaEntrega')}" th:errors="*{fechaEntrega}">Error</div>
               </div>
 
-              <div class="col-12 col-md-6">
+              <!-- Solo se muestra cuando el producto elegido es una torta (app.js) -->
+              <div class="col-12 col-md-6" id="grupoTamano">
                 <label for="tamano" class="form-label small fw-semibold">Tamaño de la Torta *</label>
                 <select id="tamano" th:field="*{tamano}" class="form-select"
                         th:classappend="${#fields.hasErrors('tamano')} ? 'is-invalid'" required>

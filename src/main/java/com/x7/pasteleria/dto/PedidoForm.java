@@ -39,7 +39,7 @@ public class PedidoForm {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate fechaEntrega;
 
-    @NotBlank(message = "{pedido.tamano.obligatorio}")
+    /** Solo para tortas: el controlador lo exige cuando el producto es de la categoría "Tortas". */
     private String tamano;
 
     @NotNull(message = "{pedido.cantidad.obligatoria}")
