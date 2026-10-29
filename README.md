@@ -17,12 +17,21 @@ Aplicación web con **Spring Boot 3.4.5**, **Thymeleaf**, **Spring Data JPA / Hi
 
 ## 3. Configurar la conexión
 
-En `src/main/resources/application.properties`, escribe el usuario y la contraseña que pusiste al instalar PostgreSQL:
+La conexión está en `src/main/resources/application.properties`. El usuario es `postgres` y la contraseña por defecto es `admin`:
 
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/pasteleria_x7
 spring.datasource.username=postgres
-spring.datasource.password=postgres
+spring.datasource.password=${DB_PASSWORD:admin}
+```
+
+Si tu PostgreSQL usa otra contraseña, no hace falta editar el archivo: defínela en la terminal antes de ejecutar.
+
+```bash
+# Windows (cmd)
+set DB_PASSWORD=tu_clave
+# Linux / macOS
+export DB_PASSWORD=tu_clave
 ```
 
 ## 4. Ejecutar
@@ -47,7 +56,7 @@ Además se cargan 4 productos. Si la base ya tiene datos, no se vuelve a cargar 
 
 | Mensaje en consola | Causa | Solución |
 |---|---|---|
-| `password authentication failed for user "postgres"` | Contraseña incorrecta | Corrige `spring.datasource.password` |
+| `password authentication failed for user "postgres"` | Contraseña incorrecta | Define `DB_PASSWORD` con tu contraseña (paso 3) |
 | `database "pasteleria_x7" does not exist` | No se creó la base | Créala en pgAdmin (paso 2) |
 | `Connection to localhost:5432 refused` | PostgreSQL apagado o en otro puerto | Inicia el servicio de PostgreSQL o corrige el puerto |
 
