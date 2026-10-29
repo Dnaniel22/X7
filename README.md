@@ -52,6 +52,17 @@ Abre http://localhost:8080. En el primer arranque se crean las tablas y estos da
 
 Además se cargan 4 productos. Si la base ya tiene datos, no se vuelve a cargar nada: los registros se conservan al reiniciar.
 
+**Datos de demostración.** Para que el catálogo y los paneles no se vean vacíos, el primer arranque también agrega 5 productos más (uno de cada línea de negocio que faltaba), 4 clientes de ejemplo y 12 pedidos y cotizaciones en los tres estados, algunos con el monto por confirmar. Los clientes de ejemplo entran con contraseña `123456`:
+
+| Cliente | Correo |
+|---|---|
+| Rosa Quispe Huamán | rosa.quispe@correo.com |
+| Carlos Mendoza Ríos | carlos.mendoza@correo.com |
+| Andrea Flores Salas | andrea.flores@correo.com |
+| Jorge Huamán Torres | jorge.huaman@correo.com |
+
+Estos datos se cargan **una sola vez** (si `rosa.quispe@correo.com` ya existe, no se repiten). Si eliminas un producto o un pedido de ejemplo, no vuelve a aparecer al reiniciar. En una base que ya se usó, se cargan en el siguiente arranque sin tocar lo que ya había.
+
 ### Errores frecuentes
 
 | Mensaje en consola | Causa | Solución |

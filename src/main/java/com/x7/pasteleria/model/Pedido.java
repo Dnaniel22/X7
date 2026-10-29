@@ -105,10 +105,12 @@ public class Pedido {
     @Column(name = "fecha_registro", nullable = false, updatable = false)
     private LocalDateTime fechaRegistro;
 
-    /** Callback de JPA: se ejecuta justo antes del INSERT. */
+    /** Callback de JPA: se ejecuta justo antes del INSERT. Solo los datos de demostración traen una fecha propia. */
     @PrePersist
     void alRegistrar() {
-        fechaRegistro = LocalDateTime.now();
+        if (fechaRegistro == null) {
+            fechaRegistro = LocalDateTime.now();
+        }
     }
 
     /** Texto para las vistas: el producto, el tipo de evento o "Personalizado". No se guarda en la tabla. */
