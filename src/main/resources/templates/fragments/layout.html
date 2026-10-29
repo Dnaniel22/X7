@@ -53,9 +53,14 @@
               </li>
               <li>
                 <a class="dropdown-item"
-                   th:href="${session.usuario.rol == 'administrador'} ? @{/admin/panel} : @{/cliente/panel}">
+                   th:href="${session.usuario.administrador} ? @{/admin/panel} : @{/cliente/panel}">
                   <i class="bi bi-speedometer2 me-2"></i>
-                  <span th:text="${session.usuario.rol == 'administrador'} ? 'Panel de Administración' : 'Mi Panel'">Panel</span>
+                  <span th:text="${session.usuario.administrador} ? 'Panel de Administración' : 'Mi Panel'">Panel</span>
+                </a>
+              </li>
+              <li th:unless="${session.usuario.administrador}">
+                <a class="dropdown-item" th:href="@{/cliente/perfil}">
+                  <i class="bi bi-person-gear me-2"></i>Mis datos
                 </a>
               </li>
               <li><hr class="dropdown-divider"></li>

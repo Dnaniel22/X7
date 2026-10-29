@@ -14,21 +14,42 @@
     <artifactId>pasteleria-x7</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Pasteleria X7</name>
-    <description>Proyecto simplificado con Spring Boot, Spring Web y Thymeleaf</description>
+    <description>Sistema web de pedidos y catálogo con Spring Boot, Thymeleaf, Spring Data JPA, PostgreSQL y Spring Validator</description>
 
     <properties>
         <java.version>17</java.version>
     </properties>
 
     <dependencies>
+        <!-- Spring Web: controladores MVC, API REST y Tomcat embebido -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Thymeleaf: vistas generadas en el servidor -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- Spring Data JPA: incluye JPA (especificación) e Hibernate (implementación) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Driver JDBC de PostgreSQL (la base de datos que se administra con pgAdmin) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Spring Validator: anotaciones de Jakarta Bean Validation (@NotBlank, @Size, @Valid...) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <dependency>

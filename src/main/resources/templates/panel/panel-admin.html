@@ -13,7 +13,35 @@
 
     <div class="mb-4">
       <h2 class="fw-bold font-serif mb-0">Panel de Administración</h2>
-      <p class="text-muted small mb-0">Gestiona los pedidos y el catálogo de productos.</p>
+      <p class="text-muted small mb-0">Gestiona los pedidos, el catálogo de productos y los clientes.</p>
+    </div>
+
+    <!-- Resumen: cada número es una consulta count(*) a PostgreSQL -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-3">
+        <div class="card card-modern p-3 h-100">
+          <div class="small text-muted"><i class="bi bi-hourglass-split me-1"></i>Pedidos pendientes</div>
+          <div class="fs-3 fw-bold" th:text="${totalPendientes}">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card card-modern p-3 h-100">
+          <div class="small text-muted"><i class="bi bi-fire me-1"></i>En preparación</div>
+          <div class="fs-3 fw-bold" th:text="${totalEnPreparacion}">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card card-modern p-3 h-100">
+          <div class="small text-muted"><i class="bi bi-box-seam me-1"></i>Productos</div>
+          <div class="fs-3 fw-bold" th:text="${totalProductos}">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card card-modern p-3 h-100">
+          <div class="small text-muted"><i class="bi bi-people me-1"></i>Clientes registrados</div>
+          <div class="fs-3 fw-bold" th:text="${totalClientes}">0</div>
+        </div>
+      </div>
     </div>
 
     <!-- Pestañas -->
@@ -32,12 +60,31 @@
           <span class="badge bg-secondary ms-1" th:text="${#lists.size(productos)}">0</span>
         </button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" th:classappend="${tab == 'clientes'} ? 'active'"
+                data-bs-toggle="tab" data-bs-target="#tabClientes" type="button" role="tab">
+          <i class="bi bi-people me-1"></i> Clientes
+          <span class="badge bg-secondary ms-1" th:text="${#lists.size(clientes)}">0</span>
+        </button>
+      </li>
     </ul>
 
     <div class="tab-content">
 
       <!-- ===================== PEDIDOS ===================== -->
       <div class="tab-pane fade" th:classappend="${tab == 'pedidos'} ? 'show active'" id="tabPedidos" role="tabpanel">
+
+        <!-- Filtro por estado: consulta derivada findByEstadoOrderByIdDesc -->
+        <form th:action="@{/admin/panel}" method="get" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <input type="hidden" name="tab" value="pedidos">
+          <label for="filtroEstado" class="small fw-semibold mb-0">Filtrar por estado:</label>
+          <select id="filtroEstado" name="estado" class="form-select form-select-sm w-auto js-auto-submit">
+            <option value="">Todos</option>
+            <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"
+                    th:selected="${e == estadoFiltro}">Estado</option>
+          </select>
+        </form>
+
         <div class="card card-modern">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -47,37 +94,62 @@
                   <th>Cliente</th>
                   <th>Detalle del Pedido</th>
                   <th>Entrega</th>
-                  <th>Monto</th>
+                  <th style="min-width:170px;">Monto</th>
                   <th style="min-width:180px;">Estado</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 <tr th:each="p : ${pedidos}">
-                  <td class="fw-bold" th:text="${p.codigo}">#PED-0001</td>
                   <td>
-                    <div class="fw-semibold" th:text="${p.nombreCliente}">Cliente</div>
-                    <div class="small text-muted" th:text="${p.emailCliente}">correo</div>
+                    <div class="fw-bold" th:text="${p.codigo}">#PED-0001</div>
+                    <div class="small text-muted" th:text="${#temporals.format(p.fechaRegistro, 'dd/MM/yyyy HH:mm')}">fecha</div>
+                  </td>
+                  <!-- Datos del cliente obtenidos por la relación pedido.usuario_id → usuario.id -->
+                  <td>
+                    <div class="fw-semibold" th:text="${p.usuario.nombre}">Cliente</div>
+                    <div class="small text-muted" th:text="${p.usuario.email}">correo</div>
                   </td>
                   <td>
-                    <span class="fw-semibold" th:text="${p.tipo} + ': ' + ${p.producto}">Pedido</span>
+                    <span class="fw-semibold" th:text="${p.tipo.etiqueta} + ': ' + ${p.descripcion}">Pedido</span>
                     <div class="small text-muted" th:if="${p.detalle}" th:text="${p.detalle}">Detalle</div>
+                    <div class="small text-muted">
+                      <i class="bi bi-telephone me-1"></i><span th:text="${p.nombreContacto} + ' · ' + ${p.telefono}">Contacto</span>
+                    </div>
+                    <div class="small text-muted">
+                      <i class="bi bi-geo-alt me-1"></i><span th:text="${p.direccion}">Dirección</span>
+                    </div>
                   </td>
-                  <td th:text="${p.fechaEntrega} ?: '-'">-</td>
-                  <td class="fw-bold" th:text="${p.monto}">Por confirmar</td>
+                  <td th:text="${#temporals.format(p.fechaEntrega, 'dd/MM/yyyy')}">-</td>
+
+                  <!-- Monto: si está por confirmar, el administrador lo registra aquí -->
+                  <td>
+                    <span th:if="${p.monto != null}" class="fw-bold"
+                          th:text="'S/ ' + ${#numbers.formatDecimal(p.monto, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</span>
+                    <form th:if="${p.monto == null}" th:action="@{/admin/pedidos/{id}/monto(id=${p.id})}"
+                          method="post" class="m-0">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">S/</span>
+                        <input type="number" name="monto" class="form-control" step="0.01" min="0.01"
+                               placeholder="Por confirmar" required
+                               th:attr="aria-label='Monto del pedido ' + ${p.codigo}">
+                        <button type="submit" class="btn btn-outline-secondary" title="Confirmar monto">
+                          <i class="bi bi-check-lg"></i>
+                        </button>
+                      </div>
+                    </form>
+                  </td>
 
                   <!-- Cambiar el estado: formulario POST normal -->
                   <td>
                     <form th:action="@{/admin/pedidos/{id}/estado(id=${p.id})}" method="post" class="m-0">
-                      <select name="estado" class="form-select form-select-sm js-auto-submit">
-                        <option th:each="e : ${estados}" th:value="${e}" th:text="${e}"
+                      <select name="estado" class="form-select form-select-sm js-auto-submit"
+                              th:attr="aria-label='Estado del pedido ' + ${p.codigo}">
+                        <option th:each="e : ${estados}" th:value="${e}" th:text="${e.etiqueta}"
                                 th:selected="${e == p.estado}">Estado</option>
                       </select>
                     </form>
-                    <span class="badge mt-1"
-                          th:classappend="${p.estado == 'ENTREGADO'} ? 'bg-success'
-                                        : (${p.estado == 'EN PREPARACIÓN'} ? 'bg-info text-dark' : 'bg-warning text-dark')"
-                          th:text="${p.estado}">PENDIENTE</span>
+                    <span class="badge mt-1" th:classappend="${p.estado.claseBadge}" th:text="${p.estado.etiqueta}">PENDIENTE</span>
                   </td>
 
                   <td class="text-center">
@@ -91,7 +163,8 @@
                 </tr>
 
                 <tr th:if="${#lists.isEmpty(pedidos)}">
-                  <td colspan="7" class="text-center text-muted py-4">
+                  <td colspan="7" class="text-center text-muted py-4"
+                      th:text="${estadoFiltro != null} ? 'No hay pedidos en estado ' + ${estadoFiltro.etiqueta} + '.' : 'Todavía no hay pedidos ni cotizaciones registradas.'">
                     Todavía no hay pedidos ni cotizaciones registradas.
                   </td>
                 </tr>
@@ -108,6 +181,26 @@
           <!-- Listado -->
           <div class="col-12 col-xl-7">
             <h5 class="fw-bold font-serif mb-3">Catálogo de Productos</h5>
+
+            <!-- Búsqueda en el servidor por nombre y categoría (consultas derivadas de Spring Data) -->
+            <form th:action="@{/admin/panel}" method="get" class="row g-2 mb-3">
+              <input type="hidden" name="tab" value="productos">
+              <div class="col-12 col-sm-6">
+                <input type="search" name="q" th:value="${q}" class="form-control form-control-sm"
+                       placeholder="Buscar por nombre..." aria-label="Buscar producto por nombre">
+              </div>
+              <div class="col-8 col-sm-4">
+                <select name="categoria" class="form-select form-select-sm" aria-label="Filtrar por categoría">
+                  <option value="">Todas las categorías</option>
+                  <option th:each="c : ${categorias}" th:value="${c}" th:text="${c}"
+                          th:selected="${c == categoriaFiltro}">Categoría</option>
+                </select>
+              </div>
+              <div class="col-4 col-sm-2 d-grid">
+                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i> Buscar</button>
+              </div>
+            </form>
+
             <div class="card card-modern">
               <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -117,20 +210,32 @@
                       <th>Nombre</th>
                       <th>Categoría</th>
                       <th>Precio</th>
-                      <th class="text-center" style="width:70px;">Acción</th>
+                      <th>Estado</th>
+                      <th class="text-center" style="width:110px;">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr th:each="p : ${productos}">
+                    <tr th:each="p : ${productos}" th:classappend="${producto.id == p.id} ? 'table-warning'">
                       <td>
                         <img th:src="${p.imagen} ?: 'https://via.placeholder.com/50?text=X7'" th:alt="${p.nombre}"
                              class="rounded-3" style="width:50px;height:50px;object-fit:cover;">
                       </td>
-                      <td class="fw-bold" th:text="${p.nombre}">Producto</td>
+                      <td>
+                        <div class="fw-bold" th:text="${p.nombre}">Producto</div>
+                        <div class="small text-muted" th:text="${p.etiqueta}">Etiqueta</div>
+                      </td>
                       <td><span class="badge badge-gold" th:text="${p.categoria}">Categoría</span></td>
-                      <td class="fw-bold" th:text="'S/ ' + ${#numbers.formatDecimal(p.precio, 1, 2)}">S/ 0.00</td>
-                      <td class="text-center">
-                        <form th:action="@{/admin/productos/{id}/eliminar(id=${p.id})}" method="post" class="m-0">
+                      <td class="fw-bold" th:text="'S/ ' + ${#numbers.formatDecimal(p.precio, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                      <td>
+                        <span class="badge" th:classappend="${p.disponible} ? 'bg-success' : 'bg-secondary'"
+                              th:text="${p.disponible} ? 'Disponible' : 'Oculto'">Disponible</span>
+                      </td>
+                      <td class="text-center text-nowrap">
+                        <a th:href="@{/admin/productos/{id}/editar(id=${p.id})}" class="btn btn-sm btn-outline-secondary"
+                           title="Editar producto" th:attr="aria-label='Editar ' + ${p.nombre}">
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                        <form th:action="@{/admin/productos/{id}/eliminar(id=${p.id})}" method="post" class="m-0 d-inline">
                           <button type="submit" class="btn btn-sm btn-danger" title="Eliminar producto"
                                   th:attr="data-confirmar='¿Eliminar ' + ${p.nombre} + ' del catálogo?'">
                             <i class="bi bi-trash"></i>
@@ -140,8 +245,8 @@
                     </tr>
 
                     <tr th:if="${#lists.isEmpty(productos)}">
-                      <td colspan="5" class="text-center text-muted py-4">
-                        Todavía no hay productos en el catálogo.
+                      <td colspan="6" class="text-center text-muted py-4">
+                        No se encontraron productos con esos filtros.
                       </td>
                     </tr>
                   </tbody>
@@ -150,51 +255,122 @@
             </div>
           </div>
 
-          <!-- Alta de producto -->
+          <!-- Registro y edición de producto (mismo formulario) -->
           <div class="col-12 col-xl-5">
-            <h5 class="fw-bold font-serif mb-3">Nuevo Producto</h5>
+            <h5 class="fw-bold font-serif mb-3"
+                th:text="${producto.id == null} ? 'Nuevo Producto' : 'Editar Producto'">Nuevo Producto</h5>
             <div class="card card-modern p-4">
-              <form th:action="@{/admin/productos}" th:object="${producto}" method="post">
+              <!--
+                Si producto.id es null se registra (POST /admin/productos);
+                si tiene id se actualiza (POST /admin/productos/{id}/editar).
+              -->
+              <form th:action="${producto.id == null} ? @{/admin/productos} : @{/admin/productos/{id}/editar(id=${producto.id})}"
+                    th:object="${producto}" method="post" novalidate>
+
+                <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger small" role="alert">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>Revisa los campos marcados en rojo.
+                </div>
+
                 <div class="row g-3">
                   <div class="col-12">
                     <label for="nombre" class="form-label small fw-semibold">Nombre *</label>
                     <input type="text" id="nombre" th:field="*{nombre}" class="form-control"
-                           placeholder="Ej. Torta Red Velvet" required>
+                           th:classappend="${#fields.hasErrors('nombre')} ? 'is-invalid'"
+                           placeholder="Ej. Torta Red Velvet" maxlength="80" required>
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">Error</div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label for="categoria" class="form-label small fw-semibold">Categoría *</label>
-                    <select id="categoria" th:field="*{categoria}" class="form-select" required>
+                    <select id="categoria" th:field="*{categoria}" class="form-select"
+                            th:classappend="${#fields.hasErrors('categoria')} ? 'is-invalid'" required>
                       <option value="">Seleccione...</option>
                       <option th:each="c : ${categorias}" th:value="${c}" th:text="${c}">Categoría</option>
                     </select>
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('categoria')}" th:errors="*{categoria}">Error</div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label for="precio" class="form-label small fw-semibold">Precio (S/) *</label>
                     <input type="number" id="precio" th:field="*{precio}" class="form-control"
+                           th:classappend="${#fields.hasErrors('precio')} ? 'is-invalid'"
                            step="0.01" min="0.01" placeholder="95.00" required>
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('precio')}" th:errors="*{precio}">Error</div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label for="etiqueta" class="form-label small fw-semibold">Etiqueta</label>
                     <input type="text" id="etiqueta" th:field="*{etiqueta}" class="form-control"
-                           placeholder="Ej. Más vendido">
+                           th:classappend="${#fields.hasErrors('etiqueta')} ? 'is-invalid'"
+                           placeholder="Ej. Más vendido" maxlength="30">
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('etiqueta')}" th:errors="*{etiqueta}">Error</div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label for="imagen" class="form-label small fw-semibold">Imagen (URL)</label>
-                    <input type="url" id="imagen" th:field="*{imagen}" class="form-control" placeholder="https://...">
+                    <input type="url" id="imagen" th:field="*{imagen}" class="form-control js-preview-origen"
+                           th:classappend="${#fields.hasErrors('imagen')} ? 'is-invalid'"
+                           placeholder="https://..." maxlength="500">
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('imagen')}" th:errors="*{imagen}">Error</div>
+                  </div>
+                  <div class="col-12" id="previewWrapper"
+                       th:classappend="${#strings.isEmpty(producto.imagen) or #fields.hasErrors('imagen')} ? 'd-none'">
+                    <img id="previewImagen" th:src="*{imagen}" alt="Vista previa de la imagen"
+                         class="rounded-3 border" style="width:100%;max-height:160px;object-fit:cover;">
                   </div>
                   <div class="col-12">
                     <label for="descripcion" class="form-label small fw-semibold">Descripción *</label>
                     <textarea id="descripcion" th:field="*{descripcion}" class="form-control" rows="3"
-                              placeholder="Breve descripción del producto..." required></textarea>
+                              th:classappend="${#fields.hasErrors('descripcion')} ? 'is-invalid'"
+                              placeholder="Breve descripción del producto..." maxlength="500" required></textarea>
+                    <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('descripcion')}" th:errors="*{descripcion}">Error</div>
+                  </div>
+                  <div class="col-12">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="disponible" th:field="*{disponible}">
+                      <label class="form-check-label small" for="disponible">Disponible en el catálogo</label>
+                    </div>
                   </div>
                 </div>
+
                 <button type="submit" class="btn btn-terracotta w-100 mt-3 fw-bold">
-                  <i class="bi bi-plus-circle me-1"></i> Agregar al Catálogo
+                  <i class="bi me-1" th:classappend="${producto.id == null} ? 'bi-plus-circle' : 'bi-save'"></i>
+                  <span th:text="${producto.id == null} ? 'Agregar al Catálogo' : 'Guardar Cambios'">Agregar al Catálogo</span>
                 </button>
+                <a th:if="${producto.id != null}" th:href="@{/admin/panel(tab='productos')}"
+                   class="btn btn-outline-burgundy w-100 mt-2">Cancelar edición</a>
               </form>
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- ===================== CLIENTES ===================== -->
+      <div class="tab-pane fade" th:classappend="${tab == 'clientes'} ? 'show active'" id="tabClientes" role="tabpanel">
+        <!-- Cada fila cuenta los pedidos del cliente recorriendo la relación usuario → pedidos -->
+        <div class="card card-modern">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Teléfono</th>
+                  <th>Dirección</th>
+                  <th class="text-center">Pedidos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="c : ${clientes}">
+                  <td class="fw-semibold" th:text="${c.nombre}">Cliente</td>
+                  <td th:text="${c.email}">correo</td>
+                  <td th:text="${c.telefono} ?: '—'">—</td>
+                  <td th:text="${c.direccion} ?: '—'">—</td>
+                  <td class="text-center"><span class="badge bg-secondary" th:text="${c.totalPedidos}">0</span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(clientes)}">
+                  <td colspan="5" class="text-center text-muted py-4">Todavía no hay clientes registrados.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

@@ -19,29 +19,38 @@
             <p class="text-muted small">Llena los datos requeridos para procesar la cotización de tu pedido.</p>
           </div>
 
-          <div th:if="${error}" class="alert alert-danger small" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Error</span>
-          </div>
+          <!--
+            El formulario se enlaza a PedidoForm con th:object.
+            Spring Validator revisa los datos (@Valid) y th:errors muestra cada mensaje bajo su campo.
+          -->
+          <form th:action="@{/pedido}" th:object="${pedido}" method="post" novalidate>
 
-          <!-- El formulario se enlaza al objeto Pedido con th:object -->
-          <form th:action="@{/pedido}" th:object="${pedido}" method="post">
+            <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger small" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>Revisa los campos marcados en rojo.
+            </div>
 
             <h5 class="fw-bold mb-3 text-danger"><i class="bi bi-person me-2"></i>1. Datos de Contacto</h5>
             <div class="row g-3 mb-4">
               <div class="col-12 col-md-6">
                 <label for="nombreContacto" class="form-label small fw-semibold">Nombre Completo *</label>
                 <input type="text" id="nombreContacto" th:field="*{nombreContacto}" class="form-control"
-                       placeholder="Ej. Ana Torres" required>
+                       th:classappend="${#fields.hasErrors('nombreContacto')} ? 'is-invalid'"
+                       placeholder="Ej. Ana Torres" maxlength="100" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('nombreContacto')}" th:errors="*{nombreContacto}">Error</div>
               </div>
               <div class="col-12 col-md-6">
                 <label for="telefono" class="form-label small fw-semibold">Teléfono / WhatsApp *</label>
                 <input type="tel" id="telefono" th:field="*{telefono}" class="form-control"
-                       placeholder="987654321" required>
+                       th:classappend="${#fields.hasErrors('telefono')} ? 'is-invalid'"
+                       placeholder="987654321" maxlength="9" inputmode="numeric" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}">Error</div>
               </div>
               <div class="col-12">
                 <label for="direccion" class="form-label small fw-semibold">Dirección de Entrega en Ica *</label>
                 <input type="text" id="direccion" th:field="*{direccion}" class="form-control"
-                       placeholder="Urb. La Angostura Mz. B Lt. 4, Ica" required>
+                       th:classappend="${#fields.hasErrors('direccion')} ? 'is-invalid'"
+                       placeholder="Urb. La Angostura Mz. B Lt. 4, Ica" maxlength="200" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('direccion')}" th:errors="*{direccion}">Error</div>
               </div>
             </div>
 
@@ -50,42 +59,56 @@
             </h5>
             <div class="row g-3 mb-4">
               <div class="col-12 col-md-6">
-                <label for="producto" class="form-label small fw-semibold">Tipo de Producto *</label>
-                <select id="producto" th:field="*{producto}" class="form-select" required>
+                <label for="productoId" class="form-label small fw-semibold">Tipo de Producto *</label>
+                <select id="productoId" th:field="*{productoId}" class="form-select"
+                        th:classappend="${#fields.hasErrors('productoId')} ? 'is-invalid'" required>
                   <option value="">Seleccione...</option>
+                  <!-- Los productos salen de la tabla producto (solo los disponibles) -->
                   <option th:each="p : ${productos}"
-                          th:value="${p.nombre}"
-                          th:attr="data-precio=${p.precio}"
-                          th:text="${p.nombre} + ' — S/ ' + ${#numbers.formatDecimal(p.precio, 1, 2)}">
+                          th:value="${p.id}"
+                          th:attr="data-precio=${p.precio},data-categoria=${p.categoria}"
+                          th:text="${p.nombre} + ' — S/ ' + ${#numbers.formatDecimal(p.precio, 1, 'COMMA', 2, 'POINT')}">
                     Producto
                   </option>
-                  <option value="Otro / Personalizado">Otro / Personalizado</option>
+                  <option th:value="0">Otro / Personalizado</option>
                 </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('productoId')}" th:errors="*{productoId}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="fechaEntrega" class="form-label small fw-semibold">Fecha de Entrega *</label>
-                <input type="date" id="fechaEntrega" th:field="*{fechaEntrega}" class="form-control" required>
+                <input type="date" id="fechaEntrega" th:field="*{fechaEntrega}" class="form-control"
+                       th:classappend="${#fields.hasErrors('fechaEntrega')} ? 'is-invalid'"
+                       th:min="${fechaMinima}" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('fechaEntrega')}" th:errors="*{fechaEntrega}">Error</div>
               </div>
 
-              <div class="col-12 col-md-6">
+              <!-- Solo se muestra cuando el producto elegido es una torta (app.js) -->
+              <div class="col-12 col-md-6" id="grupoTamano">
                 <label for="tamano" class="form-label small fw-semibold">Tamaño de la Torta *</label>
-                <select id="tamano" name="tamano" class="form-select" required>
+                <select id="tamano" th:field="*{tamano}" class="form-select"
+                        th:classappend="${#fields.hasErrors('tamano')} ? 'is-invalid'" required>
                   <option value="">Seleccione...</option>
-                  <option th:each="t : ${tamanos}" th:value="${t}" th:text="${t}">Tamaño</option>
+                  <option th:each="t : ${tamanos}" th:value="${t.key}"
+                          th:attr="data-factor=${t.value}" th:text="${t.key}">Tamaño</option>
                 </select>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('tamano')}" th:errors="*{tamano}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="cantidad" class="form-label small fw-semibold">Cantidad *</label>
-                <input type="number" id="cantidad" name="cantidad" class="form-control"
-                       min="1" max="50" value="1" required>
+                <input type="number" id="cantidad" th:field="*{cantidad}" class="form-control"
+                       th:classappend="${#fields.hasErrors('cantidad')} ? 'is-invalid'"
+                       min="1" max="50" required>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('cantidad')}" th:errors="*{cantidad}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="colores" class="form-label small fw-semibold">Colores / Temática</label>
-                <input type="text" id="colores" name="colores" class="form-control"
-                       placeholder="Ej. Tono Rose Gold y Flores">
+                <input type="text" id="colores" th:field="*{colores}" class="form-control"
+                       th:classappend="${#fields.hasErrors('colores')} ? 'is-invalid'"
+                       placeholder="Ej. Tono Rose Gold y Flores" maxlength="100">
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('colores')}" th:errors="*{colores}">Error</div>
               </div>
 
               <div class="col-12 col-md-6">
@@ -97,8 +120,10 @@
 
               <div class="col-12">
                 <label for="detalles" class="form-label small fw-semibold">Detalles Especiales</label>
-                <textarea id="detalles" name="detalles" class="form-control" rows="3"
-                          placeholder="Dedicatoria o sabores preferidos..."></textarea>
+                <textarea id="detalles" th:field="*{detalles}" class="form-control" rows="3"
+                          th:classappend="${#fields.hasErrors('detalles')} ? 'is-invalid'"
+                          placeholder="Dedicatoria o sabores preferidos..." maxlength="500"></textarea>
+                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('detalles')}" th:errors="*{detalles}">Error</div>
               </div>
             </div>
 

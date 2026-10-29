@@ -1,18 +1,29 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.data.Datos;
+import com.x7.pasteleria.dto.CateringForm;
+import com.x7.pasteleria.dto.PedidoForm;
 import com.x7.pasteleria.model.Pedido;
 import com.x7.pasteleria.model.Producto;
+import com.x7.pasteleria.model.Rol;
+import com.x7.pasteleria.model.TipoPedido;
 import com.x7.pasteleria.model.Usuario;
+import com.x7.pasteleria.repository.PedidoRepository;
+import com.x7.pasteleria.repository.ProductoRepository;
+import com.x7.pasteleria.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,30 +31,50 @@ import java.util.Map;
 @Controller
 public class PedidoController {
 
+    /** Valor del desplegable para un producto que no está en el catálogo. */
+    private static final long PRODUCTO_PERSONALIZADO = 0L;
+
+    /** El tamaño (porciones) solo tiene sentido en las tortas; los demás productos se piden por cantidad. */
+    private static final String CATEGORIA_CON_TAMANO = "Tortas";
+
     /**
-     * Cada tamaño multiplica el precio base del producto.
+     * Cada tamaño multiplica el precio base de una torta.
      * Es un LinkedHashMap para que el desplegable respete este orden.
      */
-    private static final Map<String, Double> TAMANOS = new LinkedHashMap<>();
+    private static final Map<String, BigDecimal> TAMANOS = new LinkedHashMap<>();
 
     static {
-        TAMANOS.put("Pequeña (6-8 porciones)", 1.0);
-        TAMANOS.put("Mediana (12-15 porciones)", 1.5);
-        TAMANOS.put("Grande (20-25 porciones)", 2.0);
-        TAMANOS.put("Extra Grande (30-40 porciones)", 3.0);
+        TAMANOS.put("Pequeña (6-8 porciones)", new BigDecimal("1.0"));
+        TAMANOS.put("Mediana (12-15 porciones)", new BigDecimal("1.5"));
+        TAMANOS.put("Grande (20-25 porciones)", new BigDecimal("2.0"));
+        TAMANOS.put("Extra Grande (30-40 porciones)", new BigDecimal("3.0"));
     }
 
     private static final List<String> TIPOS_EVENTO = List.of(
             "Matrimonio", "Quinceañero", "Evento Corporativo", "Aniversario / Cumpleaños");
 
+    private final PedidoRepository pedidoRepository;
+    private final ProductoRepository productoRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public PedidoController(PedidoRepository pedidoRepository,
+                            ProductoRepository productoRepository,
+                            UsuarioRepository usuarioRepository) {
+        this.pedidoRepository = pedidoRepository;
+        this.productoRepository = productoRepository;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    // Listas que necesitan los desplegables de las dos vistas.
+
     @ModelAttribute("productos")
     public List<Producto> productos() {
-        return Datos.PRODUCTOS;
+        return productoRepository.findByDisponibleTrueOrderByCategoriaAscNombreAsc();
     }
 
     @ModelAttribute("tamanos")
-    public List<String> tamanos() {
-        return List.copyOf(TAMANOS.keySet());
+    public Map<String, BigDecimal> tamanos() {
+        return TAMANOS;
     }
 
     @ModelAttribute("tiposEvento")
@@ -51,126 +82,167 @@ public class PedidoController {
         return TIPOS_EVENTO;
     }
 
+    @ModelAttribute("fechaMinima")
+    public LocalDate fechaMinima() {
+        return LocalDate.now().plusDays(1);
+    }
+
     // ---------------- Encargar pedido ----------------
 
     @GetMapping("/pedido")
-    public String formularioPedido(@RequestParam(required = false) String producto,
+    public String formularioPedido(@RequestParam(name = "producto", required = false) Long productoId,
                                    HttpSession session,
                                    Model model) {
 
-        Pedido pedido = new Pedido();
-        pedido.setProducto(producto);
+        PedidoForm form = new PedidoForm();
+        form.setProductoId(productoId);
 
-        Usuario cliente = clienteEnSesion(session);
+        // Si es un cliente, sus datos de contacto aparecen ya completados.
+        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
         if (cliente != null) {
-            pedido.setNombreContacto(cliente.getNombre());
-            pedido.setTelefono(cliente.getTelefono());
-            pedido.setDireccion(cliente.getDireccion());
+            form.setNombreContacto(cliente.getNombre());
+            form.setTelefono(cliente.getTelefono());
+            form.setDireccion(cliente.getDireccion());
         }
 
-        model.addAttribute("pedido", pedido);
+        model.addAttribute("pedido", form);
         return "pedido";
     }
 
     @PostMapping("/pedido")
-    public String registrarPedido(@ModelAttribute("pedido") Pedido pedido,
-                                  @RequestParam(defaultValue = "") String tamano,
-                                  @RequestParam(defaultValue = "1") int cantidad,
-                                  @RequestParam(defaultValue = "") String colores,
-                                  @RequestParam(defaultValue = "") String detalles,
+    public String registrarPedido(@Valid @ModelAttribute("pedido") PedidoForm form,
+                                  BindingResult result,
                                   HttpSession session,
                                   Model model,
                                   RedirectAttributes flash) {
 
-        Usuario cliente = clienteEnSesion(session);
+        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
         if (cliente == null) {
             model.addAttribute("mostrarModalAuth", true);
             return "pedido";
         }
 
-        if (vacio(pedido.getProducto()) || vacio(pedido.getFechaEntrega()) || vacio(tamano)) {
-            model.addAttribute("error", "Completa el producto, la fecha de entrega y el tamaño.");
-            return "pedido";
+        // Reglas que dependen de la base de datos o de las listas del negocio.
+        Producto producto = null;
+        if (form.getProductoId() != null && form.getProductoId() != PRODUCTO_PERSONALIZADO) {
+            producto = productoRepository.findById(form.getProductoId())
+                    .filter(Producto::isDisponible)
+                    .orElse(null);
+            if (producto == null) {
+                result.rejectValue("productoId", "pedido.producto.noDisponible");
+            }
+        }
+        // El tamaño es obligatorio en las tortas; en bocaditos, buffets y personalizados no aplica.
+        boolean esTorta = producto != null && CATEGORIA_CON_TAMANO.equals(producto.getCategoria());
+        if (esTorta) {
+            if (form.getTamano() == null) {
+                result.rejectValue("tamano", "pedido.tamano.obligatorio");
+            } else if (!TAMANOS.containsKey(form.getTamano())) {
+                result.rejectValue("tamano", "pedido.tamano.valido");
+            }
+        } else {
+            form.setTamano(null);
+        }
+        if (form.getFechaEntrega() != null && form.getFechaEntrega().isAfter(LocalDate.now().plusYears(1))) {
+            result.rejectValue("fechaEntrega", "pedido.fecha.lejana");
         }
 
-        pedido.setTipo("Pedido");
-        pedido.setDetalle(unir(tamano,
-                cantidad > 1 ? "Cantidad: " + cantidad : "",
-                colores,
-                detalles));
-        pedido.setMonto(calcularMonto(pedido.getProducto(), tamano, cantidad));
+        if (result.hasErrors()) {
+            return "pedido";   // vuelve al formulario con los mensajes junto a cada campo
+        }
 
-        guardar(pedido, cliente);
-        flash.addFlashAttribute("exito", "¡Pedido " + pedido.getCodigo() + " registrado!");
+        Pedido pedido = new Pedido();
+        pedido.setTipo(TipoPedido.PEDIDO);
+        pedido.setUsuario(usuarioRepository.getReferenceById(cliente.getId()));
+        pedido.setProducto(producto);   // null si es personalizado
+        pedido.setFechaEntrega(form.getFechaEntrega());
+        pedido.setNombreContacto(form.getNombreContacto());
+        pedido.setTelefono(form.getTelefono());
+        pedido.setDireccion(form.getDireccion());
+        pedido.setDetalle(unir(
+                form.getTamano(),
+                form.getCantidad() > 1 ? "Cantidad: " + form.getCantidad() : "",
+                form.getColores(),
+                form.getDetalles()));
+        // Torta: precio × factor del tamaño × cantidad. Otros productos: precio × cantidad. Personalizado: por confirmar (NULL).
+        pedido.setMonto(producto == null ? null : calcularMonto(producto, form.getTamano(), form.getCantidad()));
+
+        Pedido guardado = guardarConCodigo(pedido);
+        flash.addFlashAttribute("exito", "¡Pedido " + guardado.getCodigo() + " registrado!");
         return "redirect:/cliente/panel";
     }
 
     // ---------------- Cotizar catering ----------------
 
     @GetMapping("/reservar")
-    public String formularioReserva(Model model) {
-        model.addAttribute("pedido", new Pedido());
+    public String formularioReserva(HttpSession session, Model model) {
+        CateringForm form = new CateringForm();
+        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
+        if (cliente != null) {
+            form.setTelefono(cliente.getTelefono());
+        }
+        model.addAttribute("catering", form);
         return "reservar";
     }
 
     @PostMapping("/reservar")
-    public String registrarReserva(@ModelAttribute("pedido") Pedido pedido,
-                                   @RequestParam(defaultValue = "") String invitados,
-                                   @RequestParam(defaultValue = "") String lugar,
-                                   @RequestParam(defaultValue = "") String requerimientos,
+    public String registrarReserva(@Valid @ModelAttribute("catering") CateringForm form,
+                                   BindingResult result,
                                    HttpSession session,
                                    Model model,
                                    RedirectAttributes flash) {
 
-        Usuario cliente = clienteEnSesion(session);
+        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
         if (cliente == null) {
             model.addAttribute("mostrarModalAuth", true);
             return "reservar";
         }
 
-        if (vacio(pedido.getProducto()) || vacio(pedido.getFechaEntrega()) || vacio(lugar)) {
-            model.addAttribute("error", "Completa el tipo de evento, la fecha y el lugar.");
+        if (form.getTipoEvento() != null && !TIPOS_EVENTO.contains(form.getTipoEvento())) {
+            result.rejectValue("tipoEvento", "catering.tipoEvento.valido");
+        }
+        if (form.getFechaEvento() != null && form.getFechaEvento().isAfter(LocalDate.now().plusYears(1))) {
+            result.rejectValue("fechaEvento", "pedido.fecha.lejana");
+        }
+
+        if (result.hasErrors()) {
             return "reservar";
         }
 
-        pedido.setTipo("Catering");
-        pedido.setDetalle(unir(
-                vacio(invitados) ? "" : invitados + " invitados",
-                "Lugar: " + lugar,
-                requerimientos));
-        pedido.setMonto("Por confirmar");
+        Pedido pedido = new Pedido();
+        pedido.setTipo(TipoPedido.CATERING);
+        pedido.setUsuario(usuarioRepository.getReferenceById(cliente.getId()));
+        pedido.setTipoEvento(form.getTipoEvento());   // el catering no tiene producto del catálogo
+        pedido.setFechaEntrega(form.getFechaEvento());
         pedido.setNombreContacto(cliente.getNombre());
-        pedido.setTelefono(cliente.getTelefono());
-        pedido.setDireccion(lugar);
+        pedido.setTelefono(form.getTelefono());
+        pedido.setDireccion(form.getLugar());
+        pedido.setDetalle(unir(
+                form.getInvitados() + " invitados",
+                "Lugar: " + form.getLugar(),
+                form.getRequerimientos()));
+        pedido.setMonto(null);   // lo confirma el administrador
 
-        guardar(pedido, cliente);
-        flash.addFlashAttribute("exito", "¡Solicitud " + pedido.getCodigo() + " registrada!");
+        Pedido guardado = guardarConCodigo(pedido);
+        flash.addFlashAttribute("exito", "¡Solicitud " + guardado.getCodigo() + " registrada!");
         return "redirect:/cliente/panel";
     }
 
     // ---------------- Apoyo ----------------
 
-    private void guardar(Pedido pedido, Usuario cliente) {
-        long id = Datos.nuevoPedidoId();
-        pedido.setId(id);
-        pedido.setCodigo(String.format("#PED-%04d", 1000 + id));
-        pedido.setEstado("PENDIENTE");
-        pedido.setNombreCliente(cliente.getNombre());
-        pedido.setEmailCliente(cliente.getEmail());
-        Datos.PEDIDOS.add(pedido);
+    /** Guarda el pedido y, con el id que generó PostgreSQL, le asigna su código visible. */
+    private Pedido guardarConCodigo(Pedido pedido) {
+        Pedido guardado = pedidoRepository.save(pedido);                        // INSERT
+        guardado.setCodigo(String.format("#PED-%04d", 1000 + guardado.getId()));
+        return pedidoRepository.save(guardado);                                 // UPDATE del código
     }
 
-    private String calcularMonto(String nombreProducto, String tamano, int cantidad) {
-        Double factor = TAMANOS.get(tamano);
-        Producto producto = Datos.PRODUCTOS.stream()
-                .filter(p -> p.getNombre().equalsIgnoreCase(nombreProducto))
-                .findFirst()
-                .orElse(null);
-
-        if (producto == null || factor == null) {
-            return "Por confirmar";
-        }
-        return String.format("S/ %.2f", producto.getPrecio() * factor * cantidad);
+    private BigDecimal calcularMonto(Producto producto, String tamano, int cantidad) {
+        BigDecimal factor = tamano == null ? BigDecimal.ONE : TAMANOS.get(tamano);
+        return producto.getPrecio()
+                .multiply(factor)
+                .multiply(BigDecimal.valueOf(cantidad))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     private String unir(String... partes) {
@@ -182,14 +254,5 @@ public class PedidoController {
             }
         }
         return sb.toString();
-    }
-
-    private boolean vacio(String texto) {
-        return texto == null || texto.isBlank();
-    }
-
-    private Usuario clienteEnSesion(HttpSession session) {
-        Usuario usuario = (Usuario) session.getAttribute("usuario");
-        return usuario != null && "cliente".equalsIgnoreCase(usuario.getRol()) ? usuario : null;
     }
 }

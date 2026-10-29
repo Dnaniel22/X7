@@ -1,15 +1,18 @@
 package com.x7.pasteleria.controller;
 
-import com.x7.pasteleria.data.Datos;
-import com.x7.pasteleria.model.Producto;
+import com.x7.pasteleria.repository.ProductoRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.List;
-
 @Controller
 public class WebController {
+
+    private final ProductoRepository productoRepository;
+
+    public WebController(ProductoRepository productoRepository) {
+        this.productoRepository = productoRepository;
+    }
 
     @GetMapping("/")
     public String inicio() {
@@ -18,14 +21,9 @@ public class WebController {
 
     @GetMapping("/catalogo")
     public String catalogo(Model model) {
-        List<String> categorias = Datos.PRODUCTOS.stream()
-                .map(Producto::getCategoria)
-                .distinct()
-                .sorted()
-                .toList();
-
-        model.addAttribute("productos", Datos.PRODUCTOS);
-        model.addAttribute("categorias", categorias);
+        // Los productos y las categorías se leen de PostgreSQL en cada visita.
+        model.addAttribute("productos", productoRepository.findByDisponibleTrueOrderByCategoriaAscNombreAsc());
+        model.addAttribute("categorias", productoRepository.categoriasDisponibles());
         return "catalogo";
     }
 }

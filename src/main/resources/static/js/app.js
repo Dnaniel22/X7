@@ -30,7 +30,7 @@ function filtrarCatalogo() {
   const tarjetas = Array.from(grilla.querySelectorAll(".producto-card"));
   const buscador = document.getElementById("buscadorProductos");
   const sinResultados = document.getElementById("sinResultados");
-  const botones = Array.from(document.querySelectorAll("[data-categoria]"));
+  const botones = Array.from(document.querySelectorAll("button[data-categoria]"));
   let categoriaActiva = "";
 
   function aplicar() {
@@ -69,21 +69,27 @@ function filtrarCatalogo() {
   buscador.addEventListener("input", aplicar);
 }
 
-/* ---------- Pedido: total estimado (el monto real lo calcula el servidor) ---------- */
+/* ---------- Pedido: tamaño solo para tortas y total estimado (el monto real lo calcula el servidor) ---------- */
 function estimarTotalPedido() {
-  const selectProducto = document.getElementById("producto");
+  const selectProducto = document.getElementById("productoId");
   const selectTamano = document.getElementById("tamano");
+  const grupoTamano = document.getElementById("grupoTamano");
   const inputCantidad = document.getElementById("cantidad");
   const salida = document.getElementById("totalEstimado");
 
-  if (!selectProducto || !selectTamano || !inputCantidad || !salida) return;
+  if (!selectProducto || !selectTamano || !grupoTamano || !inputCantidad || !salida) return;
 
   function calcular() {
     const opcionProducto = selectProducto.selectedOptions[0];
-    const opcionTamano = selectTamano.selectedOptions[0];
+    const esTorta = Boolean(opcionProducto && opcionProducto.dataset.categoria === "Tortas");
 
+    // Bocaditos, buffets y personalizados no tienen tamaño: se oculta y no se envía (disabled).
+    grupoTamano.classList.toggle("d-none", !esTorta);
+    selectTamano.disabled = !esTorta;
+
+    const opcionTamano = selectTamano.selectedOptions[0];
     const precio = Number(opcionProducto && opcionProducto.dataset.precio);
-    const factor = Number(opcionTamano && opcionTamano.dataset.factor);
+    const factor = esTorta ? Number(opcionTamano && opcionTamano.dataset.factor) : 1;
     const cantidad = Number(inputCantidad.value) || 1;
 
     salida.value =
@@ -117,9 +123,21 @@ function previsualizarImagen() {
 
   if (!campo || !contenedor || !imagen) return;
 
+  // Solo se muestra cuando la imagen realmente carga; si la URL está rota, se oculta.
+  imagen.addEventListener("load", function () {
+    contenedor.classList.remove("d-none");
+  });
+  imagen.addEventListener("error", function () {
+    contenedor.classList.add("d-none");
+  });
+
   campo.addEventListener("input", function () {
     const url = campo.value.trim();
-    imagen.src = url;
-    contenedor.classList.toggle("d-none", url === "");
+    if (url === "") {
+      contenedor.classList.add("d-none");
+      imagen.removeAttribute("src");
+    } else {
+      imagen.src = url;
+    }
   });
 }

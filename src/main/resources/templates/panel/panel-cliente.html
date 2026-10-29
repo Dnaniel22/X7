@@ -67,20 +67,23 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- Thymeleaf recorre la lista que puso el controlador -->
+                <!-- Pedidos del cliente leídos de PostgreSQL (WHERE usuario_id = id del cliente) -->
                 <tr th:each="p : ${pedidos}">
-                  <td class="fw-bold" th:text="${p.codigo}">#PED-0001</td>
                   <td>
-                    <span class="fw-semibold" th:text="${p.tipo} + ': ' + ${p.producto}">Pedido</span>
+                    <div class="fw-bold" th:text="${p.codigo}">#PED-0001</div>
+                    <div class="small text-muted" th:text="${#temporals.format(p.fechaRegistro, 'dd/MM/yyyy')}">01/01/2026</div>
+                  </td>
+                  <td>
+                    <span class="fw-semibold" th:text="${p.tipo.etiqueta} + ': ' + ${p.descripcion}">Pedido</span>
                     <div class="small text-muted" th:if="${p.detalle}" th:text="${p.detalle}">Detalle</div>
                   </td>
-                  <td th:text="${p.fechaEntrega} ?: '-'">-</td>
-                  <td class="fw-bold" th:text="${p.monto}">Por confirmar</td>
+                  <td th:text="${#temporals.format(p.fechaEntrega, 'dd/MM/yyyy')}">-</td>
+                  <td class="fw-bold"
+                      th:text="${p.monto != null} ? 'S/ ' + ${#numbers.formatDecimal(p.monto, 1, 'COMMA', 2, 'POINT')} : 'Por confirmar'">
+                    Por confirmar
+                  </td>
                   <td>
-                    <span class="badge"
-                          th:classappend="${p.estado == 'ENTREGADO'} ? 'bg-success'
-                                        : (${p.estado == 'EN PREPARACIÓN'} ? 'bg-info text-dark' : 'bg-warning text-dark')"
-                          th:text="${p.estado}">PENDIENTE</span>
+                    <span class="badge" th:classappend="${p.estado.claseBadge}" th:text="${p.estado.etiqueta}">PENDIENTE</span>
                   </td>
                 </tr>
 
@@ -106,8 +109,11 @@
           <p class="fw-semibold mb-3" th:text="${usuario.email}">—</p>
           <p class="small text-muted mb-1">Teléfono</p>
           <p class="fw-semibold mb-3" th:text="${usuario.telefono} ?: '—'">—</p>
-          <p class="small text-muted mb-0">Dirección</p>
-          <p class="fw-semibold mb-0" th:text="${usuario.direccion} ?: '—'">—</p>
+          <p class="small text-muted mb-1">Dirección</p>
+          <p class="fw-semibold mb-3" th:text="${usuario.direccion} ?: '—'">—</p>
+          <a th:href="@{/cliente/perfil}" class="btn btn-outline-burgundy btn-sm">
+            <i class="bi bi-pencil-square me-1"></i> Editar mis datos
+          </a>
         </div>
       </div>
     </div>
