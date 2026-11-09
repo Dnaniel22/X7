@@ -5,6 +5,7 @@ import com.x7.pasteleria.model.Usuario;
 import com.x7.pasteleria.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -16,15 +17,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional;
-
 @Controller
 public class AuthController {
 
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UsuarioRepository usuarioRepository) {
+    public AuthController(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -38,39 +39,14 @@ public class AuthController {
 
     // ---------------- Iniciar sesión ----------------
 
+    // Solo se muestra el formulario: el POST /login lo procesa Spring Security (ver SecurityConfig).
     @GetMapping("/login")
-    public String login(HttpSession session, Model model) {
+    public String login(HttpSession session) {
         Usuario enSesion = SesionUsuario.actual(session);
         if (enSesion != null) {
             return "redirect:" + SesionUsuario.rutaPanel(enSesion);
         }
-        model.addAttribute("email", "");
         return "autenticacion/login";
-    }
-
-    @PostMapping("/login")
-    public String procesarLogin(@RequestParam(required = false) String email,
-                                @RequestParam(required = false) String password,
-                                HttpSession session,
-                                Model model) {
-
-        model.addAttribute("email", email);
-        if (email == null || password == null) {
-            model.addAttribute("error", "Ingresa tu correo y tu contraseña.");
-            return "autenticacion/login";
-        }
-
-        // SELECT ... FROM usuario WHERE upper(email) = upper(?)
-        Optional<Usuario> usuario = usuarioRepository.findByEmailIgnoreCase(email)
-                .filter(u -> u.getPassword().equals(password));
-
-        if (usuario.isEmpty()) {
-            model.addAttribute("error", "Correo o contraseña incorrectos.");
-            return "autenticacion/login";
-        }
-
-        SesionUsuario.iniciar(session, usuario.get());
-        return "redirect:" + SesionUsuario.rutaPanel(usuario.get());
     }
 
     // ---------------- Crear cuenta ----------------
@@ -89,7 +65,6 @@ public class AuthController {
     public String procesarRegistro(@Valid @ModelAttribute("usuario") Usuario usuario,
                                    BindingResult result,
                                    @RequestParam(defaultValue = "false") boolean terminos,
-                                   HttpSession session,
                                    RedirectAttributes flash) {
 
         // 1. Las anotaciones de Usuario (@NotBlank, @Email, @Size...) ya se revisaron con @Valid.
@@ -111,17 +86,13 @@ public class AuthController {
         }
 
         usuario.setEmail(usuario.getEmail().toLowerCase());
+        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));   // se guarda cifrada con BCrypt
         usuario.setRol(Rol.CLIENTE);
         Usuario guardado = usuarioRepository.save(usuario);   // INSERT INTO usuario ...
 
-        SesionUsuario.iniciar(session, guardado);
-        flash.addFlashAttribute("exito", "¡Bienvenido, " + guardado.getNombre() + "! Tu cuenta fue creada.");
-        return "redirect:/cliente/panel";
+        flash.addFlashAttribute("exito", "¡Bienvenido, " + guardado.getNombre() + "! Tu cuenta fue creada. Inicia sesión.");
+        return "redirect:/login";
     }
 
-    @PostMapping("/logout")
-    public String logout(HttpSession session) {
-        session.invalidate();
-        return "redirect:/";
-    }
+    // POST /logout también lo procesa Spring Security.
 }

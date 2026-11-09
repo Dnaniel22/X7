@@ -18,15 +18,18 @@
             usa tus credenciales y serás redirigido al panel de gestión.
           </p>
 
-          <div th:if="${error}" class="alert alert-danger text-start small" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Error</span>
+          <!-- Spring Security redirige a /login?error cuando el correo o la contraseña no coinciden -->
+          <div th:if="${param.error}" class="alert alert-danger text-start small" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Correo o contraseña incorrectos.
           </div>
+          <!-- Aviso de cuenta creada (viene del registro) -->
+          <div th:replace="~{fragments/layout :: alertas}"></div>
 
           <form th:action="@{/login}" method="post">
             <div class="mb-3 text-start">
               <label for="email" class="form-label small fw-semibold">Correo Electrónico</label>
               <input type="email" id="email" name="email" class="form-control"
-                     th:value="${email}" placeholder="maria@correo.com" required>
+                     placeholder="maria@correo.com" required>
             </div>
 
             <div class="mb-3 text-start">

@@ -14,7 +14,7 @@
     <artifactId>pasteleria-x7</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Pasteleria X7</name>
-    <description>Sistema web de pedidos y catálogo con Spring Boot, Thymeleaf, Spring Data JPA, PostgreSQL y Spring Validator</description>
+    <description>Sistema web de pedidos y catálogo con Spring Boot, Thymeleaf, Spring Data JPA, PostgreSQL, Spring Validator y Spring Security</description>
 
     <properties>
         <java.version>17</java.version>

@@ -12,6 +12,7 @@ import com.x7.pasteleria.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -36,13 +37,16 @@ public class DatosIniciales implements CommandLineRunner {
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
     private final PedidoRepository pedidoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public DatosIniciales(UsuarioRepository usuarioRepository,
                           ProductoRepository productoRepository,
-                          PedidoRepository pedidoRepository) {
+                          PedidoRepository pedidoRepository,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.pedidoRepository = pedidoRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -77,6 +81,21 @@ public class DatosIniciales implements CommandLineRunner {
 
         if (!usuarioRepository.existsByEmailIgnoreCase(CLIENTE_DEMO)) {
             cargarDemostracion();
+        }
+
+        cifrarContrasenas();
+    }
+
+    // Spring Security compara con BCrypt: las contraseñas que aún estén en texto plano
+    // (usuarios de prueba o creados antes de agregar seguridad) se cifran una sola vez.
+    private void cifrarContrasenas() {
+        List<Usuario> pendientes = usuarioRepository.findAll().stream()
+                .filter(u -> !u.getPassword().startsWith("$2"))
+                .toList();
+        pendientes.forEach(u -> u.setPassword(passwordEncoder.encode(u.getPassword())));
+        usuarioRepository.saveAll(pendientes);
+        if (!pendientes.isEmpty()) {
+            log.info("Contraseñas cifradas con BCrypt: {} usuario(s)", pendientes.size());
         }
     }
 

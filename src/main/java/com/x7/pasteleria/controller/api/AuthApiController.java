@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +24,13 @@ public class AuthApiController {
 
     private final UsuarioRepository usuarioRepository;
     private final ApiRespuestas respuestas;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthApiController(UsuarioRepository usuarioRepository, ApiRespuestas respuestas) {
+    public AuthApiController(UsuarioRepository usuarioRepository, ApiRespuestas respuestas,
+                             PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.respuestas = respuestas;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/login")
@@ -36,7 +40,7 @@ public class AuthApiController {
         }
 
         Optional<Usuario> usuario = usuarioRepository.findByEmailIgnoreCase(datos.email().trim())
-                .filter(u -> u.getPassword().equals(datos.password()));
+                .filter(u -> passwordEncoder.matches(datos.password(), u.getPassword()));
         if (usuario.isEmpty()) {
             return respuestas.error(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos.");
         }

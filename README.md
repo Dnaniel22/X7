@@ -1,6 +1,6 @@
 # Pastelería y Catering X7 — Sistema Web de Gestión de Pedidos y Catálogo
 
-Aplicación web con **Spring Boot 3.4.5**, **Thymeleaf**, **Spring Data JPA / Hibernate**, **PostgreSQL** (administrado con **pgAdmin**) y **Spring Validator**.
+Aplicación web con **Spring Boot 3.4.5**, **Thymeleaf**, **Spring Data JPA / Hibernate**, **PostgreSQL** (administrado con **pgAdmin**), **Spring Validator** y **Spring Security**.
 
 ## 1. Requisitos
 
@@ -104,7 +104,28 @@ Los repositorios extienden `JpaRepository` y usan consultas derivadas (`findByEm
 - La API REST responde `400 Bad Request` con el detalle de cada campo en JSON.
 - Los formularios validados llevan `novalidate`, para que los mensajes que se vean sean los de Spring y no los del navegador. Si quitas `novalidate`, el navegador también valida con los atributos HTML5 (`required`, `min`, `maxlength`…).
 
-## 8. API REST
+## 8. Seguridad (Spring Security)
+
+La configuración está en `config/SecurityConfig.java`:
+
+- **`SecurityFilterChain`**: define las reglas de acceso que se revisan antes de llegar a cada controlador.
+
+  | Rutas | Acceso |
+  |---|---|
+  | `/`, `/catalogo`, `/pedido`, `/reservar`, `/login`, `/registro`, `/css/**`, `/js/**` | Público |
+  | `/admin/**` | Rol `ADMINISTRADOR` |
+  | `/cliente/**` | Rol `CLIENTE` |
+  | `/api/**` | Público en el filtro; cada controlador REST valida la sesión y el rol |
+  | Cualquier otra | Usuario autenticado |
+
+  Sin sesión, una ruta protegida redirige a `/login`. Con un rol que no corresponde, responde `403 Forbidden`.
+- **Autenticación con formulario** (`formLogin`): usa la vista propia `login.html`. Spring Security procesa el `POST /login`, y el campo del usuario es `email`. Si los datos son incorrectos, redirige a `/login?error`. Si son correctos, guarda el usuario en la sesión y redirige al panel según su rol.
+- **Usuarios de la base de datos** (`UserDetailsService`): se buscan en la tabla `usuario` por correo. El rol se convierte en la autoridad `ROLE_ADMINISTRADOR` o `ROLE_CLIENTE`.
+- **Contraseñas cifradas con BCrypt** (`PasswordEncoder`): el registro guarda la contraseña cifrada. Al arrancar, `DatosIniciales` cifra las que todavía estén en texto plano, como las de una base creada antes de agregar seguridad.
+- **Cerrar sesión**: `POST /logout` invalida la sesión y vuelve al inicio.
+- **CSRF**: los formularios Thymeleaf (`th:action`) envían el token automáticamente. Un `POST` sin token responde `403`. La API REST (`/api/**`) no lo exige, para poder probarla desde Postman.
+
+## 9. API REST
 
 Importa `postman/X7-API.postman_collection.json` en Postman y ejecuta primero **Iniciar sesión (admin)**: Postman guarda la cookie de sesión.
 
@@ -123,17 +144,18 @@ Importa `postman/X7-API.postman_collection.json` en Postman y ejecuta primero **
 | PUT | `/api/pedidos/{id}` | Admin | 200, 400, 404 |
 | DELETE | `/api/pedidos/{id}` | Admin | 204, 404 |
 
-## 9. Comprobar la persistencia en pgAdmin
+## 10. Comprobar la persistencia en pgAdmin
 
 Abre el *Query Tool* sobre `pasteleria_x7` y ejecuta `database/03_consultas_verificacion.sql`: lista las tablas, sus restricciones, los pedidos con su cliente y su producto (JOIN), los pedidos por estado y los clientes con su cantidad de pedidos.
 `database/02_esquema_referencia.sql` documenta el esquema que genera Hibernate.
 
-## 10. Estructura
+## 11. Estructura
 
 ```
 src/main/java/com/x7/pasteleria
 ├── X7Application.java
 ├── config/DatosIniciales.java        ← datos de partida (solo si la BD está vacía)
+├── config/SecurityConfig.java        ← Spring Security: rutas por rol, login, BCrypt
 ├── model/                            ← entidades JPA y enums
 ├── repository/                       ← interfaces Spring Data JPA
 ├── dto/                              ← formularios y cuerpos JSON validados
