@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
   estimarTotalPedido();
   autoenviarSelects();
   previsualizarImagen();
+  exigirCuentaAntesDeEnviar();
 });
 
 /* ---------- Confirmación antes de una acción destructiva ---------- */
@@ -139,5 +140,19 @@ function previsualizarImagen() {
     } else {
       imagen.src = url;
     }
+  });
+}
+
+/* ---------- Visitante sin sesión: avisa que necesita una cuenta antes de enviar el formulario ---------- */
+/* El servidor igual lo impide (SecurityConfig exige el rol CLIENTE); esto solo evita perder lo escrito. */
+function exigirCuentaAntesDeEnviar() {
+  const modal = document.getElementById("modalAuth");
+  if (!modal) return;
+
+  document.querySelectorAll("form[data-requiere-cuenta]").forEach(function (formulario) {
+    formulario.addEventListener("submit", function (evento) {
+      evento.preventDefault();
+      bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
   });
 }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head th:replace="~{fragments/layout :: head('Encargar Pedido')}"></head>
 
@@ -22,8 +23,14 @@
           <!--
             El formulario se enlaza a PedidoForm con th:object.
             Spring Validator revisa los datos (@Valid) y th:errors muestra cada mensaje bajo su campo.
+            data-requiere-cuenta: si es un visitante, app.js muestra el aviso de cuenta en vez de enviar.
           -->
-          <form th:action="@{/pedido}" th:object="${pedido}" method="post" novalidate>
+          <form th:action="@{/pedido}" th:object="${pedido}" method="post" novalidate
+                th:attr="data-requiere-cuenta=${#authorization.expression('isAnonymous()')} ? 'true' : null">
+
+            <div sec:authorize="hasRole('ADMINISTRADOR')" class="alert alert-info small" role="alert">
+              <i class="bi bi-info-circle-fill me-2"></i>Entraste como administrador. Los pedidos se registran con una cuenta de cliente.
+            </div>
 
             <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger small" role="alert">
               <i class="bi bi-exclamation-triangle-fill me-2"></i>Revisa los campos marcados en rojo.
@@ -127,7 +134,8 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn-terracotta w-100 py-3 fw-bold">
+            <button type="submit" class="btn btn-terracotta w-100 py-3 fw-bold"
+                    th:disabled="${#authorization.expression('hasRole(''ADMINISTRADOR'')')}">
               <i class="bi bi-check-circle me-2"></i> Confirmar y Registrar Pedido
             </button>
           </form>
@@ -137,19 +145,15 @@
     </div>
   </div>
 
-  <div th:if="${mostrarModalAuth}"
-       th:replace="~{fragments/layout :: modalAuth(
+  <!-- Aviso para visitantes: solo un cliente con sesión puede enviar el formulario (SecurityConfig). -->
+  <th:block sec:authorize="isAnonymous()">
+    <div th:replace="~{fragments/layout :: modalAuth(
          'Necesitas una cuenta para encargar un pedido',
          'Así podemos guardar tu pedido en tu cuenta y que puedas revisar su estado cuando quieras.')}"></div>
+  </th:block>
 
   <footer th:replace="~{fragments/layout :: footer}"></footer>
   <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
-
-  <script th:if="${mostrarModalAuth}">
-    document.addEventListener("DOMContentLoaded", function () {
-      new bootstrap.Modal(document.getElementById("modalAuth")).show();
-    });
-  </script>
 
 </body>
 </html>

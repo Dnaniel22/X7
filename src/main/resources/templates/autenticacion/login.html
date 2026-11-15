@@ -18,10 +18,22 @@
             usa tus credenciales y serás redirigido al panel de gestión.
           </p>
 
-          <div th:if="${error}" class="alert alert-danger text-start small" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Error</span>
+          <!-- Mensajes según el parámetro con el que Spring Security vuelve a esta página -->
+          <div th:if="${param.error}" class="alert alert-danger text-start small" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Correo o contraseña incorrectos.
+          </div>
+          <div th:if="${param.desactivada}" class="alert alert-warning text-start small" role="alert">
+            <i class="bi bi-person-lock me-2"></i>Tu cuenta está desactivada. Comunícate con la pastelería.
+          </div>
+          <div th:if="${param.logout}" class="alert alert-success text-start small" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>Cerraste sesión correctamente.
           </div>
 
+          <!--
+            Este formulario lo procesa Spring Security (no un controlador propio):
+            compara la contraseña con el hash BCrypt de la base de datos y crea la sesión.
+            th:action agrega el token CSRF oculto.
+          -->
           <form th:action="@{/login}" method="post">
             <div class="mb-3 text-start">
               <label for="email" class="form-label small fw-semibold">Correo Electrónico</label>

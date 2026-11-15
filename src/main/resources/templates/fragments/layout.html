@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <!--
   Fragmentos reutilizables de Thymeleaf.
@@ -30,11 +31,11 @@
           </a>
 
           <!--
-            El menú se arma en el servidor leyendo la sesión.
-            ${session.usuario} es el objeto que el controlador guardó al iniciar sesión.
+            El menú se arma en el servidor según quién inició sesión (Spring Security):
+            sec:authorize muestra u oculta cada opción y sec:authentication lee los datos del usuario.
           -->
           <ul class="dropdown-menu shadow border-0">
-            <th:block th:if="${session.usuario == null}">
+            <th:block sec:authorize="isAnonymous()">
               <li>
                 <a class="dropdown-item" th:href="@{/login}">
                   <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
@@ -47,18 +48,24 @@
               </li>
             </th:block>
 
-            <th:block th:unless="${session.usuario == null}">
+            <th:block sec:authorize="isAuthenticated()">
               <li>
-                <h6 class="dropdown-header" th:text="${session.usuario.nombre}">Usuario</h6>
+                <h6 class="dropdown-header">
+                  <span sec:authentication="principal.nombre">Usuario</span>
+                  <span class="d-block small text-muted fw-normal" sec:authentication="principal.rol.etiqueta">Rol</span>
+                </h6>
               </li>
-              <li>
-                <a class="dropdown-item"
-                   th:href="${session.usuario.administrador} ? @{/admin/panel} : @{/cliente/panel}">
-                  <i class="bi bi-speedometer2 me-2"></i>
-                  <span th:text="${session.usuario.administrador} ? 'Panel de Administración' : 'Mi Panel'">Panel</span>
+              <li sec:authorize="hasRole('ADMINISTRADOR')">
+                <a class="dropdown-item" th:href="@{/admin/panel}">
+                  <i class="bi bi-speedometer2 me-2"></i>Panel de Administración
                 </a>
               </li>
-              <li th:unless="${session.usuario.administrador}">
+              <li sec:authorize="hasRole('CLIENTE')">
+                <a class="dropdown-item" th:href="@{/cliente/panel}">
+                  <i class="bi bi-speedometer2 me-2"></i>Mi Panel
+                </a>
+              </li>
+              <li sec:authorize="hasRole('CLIENTE')">
                 <a class="dropdown-item" th:href="@{/cliente/perfil}">
                   <i class="bi bi-person-gear me-2"></i>Mis datos
                 </a>
@@ -115,9 +122,9 @@
       <a class="text-white-50 small text-decoration-none d-none d-md-inline" th:href="@{/}">
         <i class="bi bi-globe me-1"></i>Ver sitio público
       </a>
-      <span class="text-white small">
+      <span class="text-white small" sec:authorize="isAuthenticated()">
         <i class="bi bi-person-circle me-1"></i>
-        <span th:text="${session.usuario != null} ? ${session.usuario.nombre} : 'Administrador'">Administrador</span>
+        <span sec:authentication="principal.nombre">Administrador</span>
       </span>
       <form th:action="@{/logout}" method="post" class="m-0">
         <button type="submit" class="btn btn-outline-light btn-sm">

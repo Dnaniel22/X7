@@ -355,6 +355,7 @@
                   <th>Teléfono</th>
                   <th>Dirección</th>
                   <th class="text-center">Pedidos</th>
+                  <th class="text-center">Cuenta</th>
                 </tr>
               </thead>
               <tbody>
@@ -364,9 +365,22 @@
                   <td th:text="${c.telefono} ?: '—'">—</td>
                   <td th:text="${c.direccion} ?: '—'">—</td>
                   <td class="text-center"><span class="badge bg-secondary" th:text="${c.totalPedidos}">0</span></td>
+                  <td class="text-center">
+                    <!-- Una cuenta desactivada no puede iniciar sesión en la web ni usar su token JWT en la API -->
+                    <form th:action="@{/admin/clientes/{id}/activo(id=${c.id})}" method="post" class="m-0 d-inline-flex align-items-center gap-2">
+                      <span class="badge" th:classappend="${c.activo} ? 'bg-success' : 'bg-secondary'"
+                            th:text="${c.activo} ? 'Activa' : 'Desactivada'">Activa</span>
+                      <button type="submit" class="btn btn-sm"
+                              th:classappend="${c.activo} ? 'btn-outline-danger' : 'btn-outline-success'"
+                              th:title="${c.activo} ? 'Desactivar cuenta' : 'Activar cuenta'"
+                              th:attr="data-confirmar=${c.activo} ? ('¿Desactivar la cuenta de ' + ${c.nombre} + '? Ya no podrá iniciar sesión.') : null">
+                        <i class="bi" th:classappend="${c.activo} ? 'bi-person-x' : 'bi-person-check'"></i>
+                      </button>
+                    </form>
+                  </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(clientes)}">
-                  <td colspan="5" class="text-center text-muted py-4">Todavía no hay clientes registrados.</td>
+                  <td colspan="6" class="text-center text-muted py-4">Todavía no hay clientes registrados.</td>
                 </tr>
               </tbody>
             </table>

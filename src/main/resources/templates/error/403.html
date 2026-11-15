@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!--
+  Página 403 (acceso denegado). Spring Boot la muestra sola cuando Spring Security
+  rechaza a un usuario que inició sesión pero no tiene el rol que pide la ruta.
+  Ejemplo: un CLIENTE que abre /admin/panel.
+-->
+<head th:replace="~{fragments/layout :: head('Acceso denegado')}"></head>
+
+<body>
+
+  <nav th:replace="~{fragments/layout :: navbar('')}"></nav>
+
+  <main class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="card card-modern p-5 text-center">
+          <i class="bi bi-shield-lock text-danger display-3 mb-3"></i>
+          <span class="badge bg-danger mx-auto mb-3">Error 403</span>
+          <h1 class="h3 font-serif fw-bold mb-2">Acceso denegado</h1>
+          <p class="text-muted mb-1">Tu cuenta no tiene permiso para entrar a esta sección.</p>
+          <p class="small text-muted mb-4" th:if="${path}">
+            Ruta solicitada: <code th:text="${path}">/admin/panel</code>
+          </p>
+
+          <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+            <a sec:authorize="hasRole('ADMINISTRADOR')" th:href="@{/admin/panel}" class="btn btn-terracotta px-4">
+              <i class="bi bi-speedometer2 me-2"></i>Ir a mi panel
+            </a>
+            <a sec:authorize="hasRole('CLIENTE')" th:href="@{/cliente/panel}" class="btn btn-terracotta px-4">
+              <i class="bi bi-speedometer2 me-2"></i>Ir a mi panel
+            </a>
+            <a th:href="@{/}" class="btn btn-outline-burgundy px-4">
+              <i class="bi bi-house me-2"></i>Volver al inicio
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+</body>
+</html>

@@ -20,7 +20,8 @@
           </div>
 
           <!--
-            El formulario se enlaza al objeto Usuario con th:object.
+            El formulario se enlaza a RegistroForm con th:object.
+            La contraseña se guarda cifrada con BCrypt.
             novalidate: la validación la hace Spring Validator en el servidor (@Valid + BindingResult)
             y cada mensaje aparece debajo de su campo con th:errors.
           -->
@@ -67,15 +68,17 @@
                 <label for="password" class="form-label small fw-semibold">Contraseña *</label>
                 <input type="password" id="password" th:field="*{password}" class="form-control"
                        th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
-                       placeholder="Mínimo 6 caracteres" minlength="6" maxlength="60" required>
+                       placeholder="Mínimo 8 caracteres" minlength="8" maxlength="60" required
+                       aria-describedby="ayudaPassword">
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Error</div>
+                <div id="ayudaPassword" class="form-text">Usa mayúsculas, minúsculas, números y un símbolo. Ej.: Torta2026!</div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="confirmarPassword" class="form-label small fw-semibold">Confirmar Contraseña *</label>
                 <input type="password" id="confirmarPassword" th:field="*{confirmarPassword}" class="form-control"
                        th:classappend="${#fields.hasErrors('confirmarPassword')} ? 'is-invalid'"
-                       placeholder="••••••••" minlength="6" maxlength="60" required>
+                       placeholder="••••••••" minlength="8" maxlength="60" required>
                 <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('confirmarPassword')}" th:errors="*{confirmarPassword}">Error</div>
               </div>
             </div>
