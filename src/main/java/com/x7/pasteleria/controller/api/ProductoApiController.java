@@ -1,10 +1,8 @@
 package com.x7.pasteleria.controller.api;
 
 import com.x7.pasteleria.model.Producto;
-import com.x7.pasteleria.model.Rol;
 import com.x7.pasteleria.repository.PedidoRepository;
 import com.x7.pasteleria.repository.ProductoRepository;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
+/**
+ * CRUD REST de productos.
+ * GET es público; POST, PUT y DELETE requieren un JWT con rol ADMINISTRADOR (SecurityConfig).
+ */
 @RestController
 @RequestMapping("/api/productos")
 public class ProductoApiController {
@@ -57,11 +58,7 @@ public class ProductoApiController {
 
     @PostMapping
     public ResponseEntity<?> registrar(@Valid @RequestBody Producto producto,
-                                       BindingResult result,
-                                       HttpSession session) {
-
-        ResponseEntity<Map<String, Object>> sinPermiso = respuestas.verificarRol(session, Rol.ADMINISTRADOR);
-        if (sinPermiso != null) return sinPermiso;
+                                       BindingResult result) {
 
         if (result.hasErrors()) {
             return respuestas.errorValidacion(result);
@@ -81,11 +78,7 @@ public class ProductoApiController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizar(@PathVariable Long id,
                                         @Valid @RequestBody Producto datos,
-                                        BindingResult result,
-                                        HttpSession session) {
-
-        ResponseEntity<Map<String, Object>> sinPermiso = respuestas.verificarRol(session, Rol.ADMINISTRADOR);
-        if (sinPermiso != null) return sinPermiso;
+                                        BindingResult result) {
 
         Optional<Producto> existente = productoRepository.findById(id);
         if (existente.isEmpty()) {
@@ -107,10 +100,7 @@ public class ProductoApiController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable Long id, HttpSession session) {
-        ResponseEntity<Map<String, Object>> sinPermiso = respuestas.verificarRol(session, Rol.ADMINISTRADOR);
-        if (sinPermiso != null) return sinPermiso;
-
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
         if (!productoRepository.existsById(id)) {
             return respuestas.error(HttpStatus.NOT_FOUND, "No existe un producto con id " + id + ".");
         }

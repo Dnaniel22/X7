@@ -12,6 +12,7 @@ import com.x7.pasteleria.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 @Component
 public class DatosIniciales implements CommandLineRunner {
@@ -31,30 +33,42 @@ public class DatosIniciales implements CommandLineRunner {
 
     private static final String CLIENTE_DEMO = "rosa.quispe@correo.com";
 
+    // Contraseñas de las cuentas de demostración. Se guardan cifradas con BCrypt.
+    static final String CLAVE_ADMIN = "Admin123!";
+    static final String CLAVE_CLIENTE = "Cliente123!";
+
+    // Forma de un hash BCrypt: $2a$10$ + 53 caracteres. Lo que no tenga esta forma está en texto plano.
+    private static final Pattern HASH_BCRYPT = Pattern.compile("^\\$2[aby]?\\$\\d{2}\\$[./A-Za-z0-9]{53}$");
+
     private static final String IMAGEN = "https://images.unsplash.com/%s?auto=format&fit=crop&w=900&q=80";
 
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
     private final PedidoRepository pedidoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public DatosIniciales(UsuarioRepository usuarioRepository,
                           ProductoRepository productoRepository,
-                          PedidoRepository pedidoRepository) {
+                          PedidoRepository pedidoRepository,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.pedidoRepository = pedidoRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(String... args) {
+        cifrarContrasenasEnTextoPlano();
+
         if (usuarioRepository.count() == 0) {
             usuarioRepository.saveAll(List.of(
                     new Usuario("Administrador X7", "admin@x7.com", "987654321",
-                            "Ica", "123456", Rol.ADMINISTRADOR),
+                            "Ica", passwordEncoder.encode(CLAVE_ADMIN), Rol.ADMINISTRADOR),
                     new Usuario("Cliente de Prueba", "cliente@x7.com", "912345678",
-                            "Urb. Las Flores Mz. A Lt. 5, Ica", "123456", Rol.CLIENTE)
+                            "Urb. Las Flores Mz. A Lt. 5, Ica", passwordEncoder.encode(CLAVE_CLIENTE), Rol.CLIENTE)
             ));
-            log.info("Usuarios iniciales creados: admin@x7.com y cliente@x7.com (contraseña 123456)");
+            log.info("Usuarios iniciales creados: admin@x7.com ({}) y cliente@x7.com ({})", CLAVE_ADMIN, CLAVE_CLIENTE);
         }
 
         if (productoRepository.count() == 0) {
@@ -78,6 +92,22 @@ public class DatosIniciales implements CommandLineRunner {
         if (!usuarioRepository.existsByEmailIgnoreCase(CLIENTE_DEMO)) {
             cargarDemostracion();
         }
+    }
+
+    /**
+     * Las bases creadas antes de Spring Security (APF3) guardaban las contraseñas en texto plano.
+     * En el primer arranque se cifran con BCrypt: cada cuenta conserva su contraseña, pero ya no se puede leer.
+     */
+    private void cifrarContrasenasEnTextoPlano() {
+        List<Usuario> pendientes = usuarioRepository.findAll().stream()
+                .filter(u -> u.getPassword() != null && !HASH_BCRYPT.matcher(u.getPassword()).matches())
+                .toList();
+        if (pendientes.isEmpty()) {
+            return;
+        }
+        pendientes.forEach(u -> u.setPassword(passwordEncoder.encode(u.getPassword())));
+        usuarioRepository.saveAll(pendientes);
+        log.info("Se cifraron con BCrypt {} contraseña(s) que estaban en texto plano", pendientes.size());
     }
 
     // =====================================================================
@@ -114,7 +144,7 @@ public class DatosIniciales implements CommandLineRunner {
         Map<String, Producto> catalogo = new HashMap<>();
         productoRepository.findAll().forEach(p -> catalogo.put(p.getNombre(), p));
 
-        // 2. Clientes de ejemplo (contraseña 123456).
+        // 2. Clientes de ejemplo (contraseña Cliente123!).
         Usuario rosa = cliente("Rosa Quispe Huamán", CLIENTE_DEMO, "956781234", "Calle Lima 245, Ica");
         Usuario carlos = cliente("Carlos Mendoza Ríos", "carlos.mendoza@correo.com", "934567812",
                 "Av. Los Maestros 1020, Ica");
@@ -181,7 +211,8 @@ public class DatosIniciales implements CommandLineRunner {
     private Usuario cliente(String nombre, String email, String telefono, String direccion) {
         return usuarioRepository.findByEmailIgnoreCase(email)
                 .orElseGet(() -> usuarioRepository.save(
-                        new Usuario(nombre, email, telefono, direccion, "123456", Rol.CLIENTE)));
+                        new Usuario(nombre, email, telefono, direccion,
+                                passwordEncoder.encode(CLAVE_CLIENTE), Rol.CLIENTE)));
     }
 
     private Pedido pedido(Usuario cliente, Producto producto, String detalle, String monto,

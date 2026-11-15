@@ -9,8 +9,12 @@ import com.x7.pasteleria.model.Usuario;
 import com.x7.pasteleria.repository.PedidoRepository;
 import com.x7.pasteleria.repository.ProductoRepository;
 import com.x7.pasteleria.repository.UsuarioRepository;
-import jakarta.servlet.http.HttpSession;
+import com.x7.pasteleria.security.SesionSeguridad;
+import com.x7.pasteleria.security.UsuarioPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -37,13 +41,16 @@ public class PanelController {
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
     private final PedidoRepository pedidoRepository;
+    private final SesionSeguridad sesionSeguridad;
 
     public PanelController(UsuarioRepository usuarioRepository,
                            ProductoRepository productoRepository,
-                           PedidoRepository pedidoRepository) {
+                           PedidoRepository pedidoRepository,
+                           SesionSeguridad sesionSeguridad) {
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.pedidoRepository = pedidoRepository;
+        this.sesionSeguridad = sesionSeguridad;
     }
 
     /** El formulario de productos no puede cambiar el id: se toma de la URL. */
@@ -61,12 +68,12 @@ public class PanelController {
     //  Panel del cliente
     // =====================================================================
 
+    // Las rutas /cliente/** solo las puede abrir el rol CLIENTE (SecurityConfig).
+    // @AuthenticationPrincipal entrega el usuario que inició sesión.
+
     @GetMapping("/cliente/panel")
-    public String panelCliente(HttpSession session, Model model) {
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
-        if (cliente == null) {
-            return "redirect:/login";
-        }
+    public String panelCliente(@AuthenticationPrincipal UsuarioPrincipal principal, Model model) {
+        Usuario cliente = usuarioRepository.findById(principal.getId()).orElseThrow();
 
         // SELECT ... FROM pedido p LEFT JOIN producto ... WHERE p.usuario_id = ?
         model.addAttribute("usuario", cliente);
@@ -75,11 +82,8 @@ public class PanelController {
     }
 
     @GetMapping("/cliente/perfil")
-    public String editarPerfil(HttpSession session, Model model) {
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
-        if (cliente == null) {
-            return "redirect:/login";
-        }
+    public String editarPerfil(@AuthenticationPrincipal UsuarioPrincipal principal, Model model) {
+        Usuario cliente = usuarioRepository.findById(principal.getId()).orElseThrow();
 
         PerfilForm form = new PerfilForm();
         form.setNombre(cliente.getNombre());
@@ -93,26 +97,24 @@ public class PanelController {
     @PostMapping("/cliente/perfil")
     public String actualizarPerfil(@Valid @ModelAttribute("perfil") PerfilForm form,
                                    BindingResult result,
-                                   HttpSession session,
+                                   @AuthenticationPrincipal UsuarioPrincipal principal,
                                    Model model,
+                                   HttpServletRequest request,
+                                   HttpServletResponse response,
                                    RedirectAttributes flash) {
 
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
-        if (cliente == null) {
-            return "redirect:/login";
-        }
         if (result.hasErrors()) {
-            model.addAttribute("email", cliente.getEmail());
+            model.addAttribute("email", principal.getEmail());
             return "panel/perfil";
         }
 
-        Usuario usuario = usuarioRepository.findById(cliente.getId()).orElseThrow();
+        Usuario usuario = usuarioRepository.findById(principal.getId()).orElseThrow();
         usuario.setNombre(form.getNombre());
         usuario.setTelefono(form.getTelefono());
         usuario.setDireccion(form.getDireccion());
         Usuario actualizado = usuarioRepository.save(usuario);   // UPDATE usuario SET ...
 
-        SesionUsuario.iniciar(session, actualizado);   // la sesión muestra los datos nuevos
+        sesionSeguridad.actualizar(actualizado, request, response);   // la barra de navegación muestra el nombre nuevo
         flash.addFlashAttribute("exito", "Tus datos se actualizaron correctamente.");
         return "redirect:/cliente/panel";
     }
@@ -121,17 +123,16 @@ public class PanelController {
     //  Panel del administrador
     // =====================================================================
 
+    // Las rutas /admin/** solo las puede abrir el rol ADMINISTRADOR (SecurityConfig),
+    // por eso estos métodos ya no revisan el rol uno por uno.
+
     @GetMapping("/admin/panel")
     public String panelAdmin(@RequestParam(defaultValue = "pedidos") String tab,
                              @RequestParam(required = false) String estado,
                              @RequestParam(required = false) String q,
                              @RequestParam(required = false) String categoria,
-                             HttpSession session,
                              Model model) {
 
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
         if (!model.containsAttribute("producto")) {
             model.addAttribute("producto", new Producto());
         }
@@ -145,13 +146,8 @@ public class PanelController {
     @PostMapping("/admin/productos")
     public String agregarProducto(@Valid @ModelAttribute("producto") Producto producto,
                                   BindingResult result,
-                                  HttpSession session,
                                   Model model,
                                   RedirectAttributes flash) {
-
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
 
         if (producto.getNombre() != null && productoRepository.existsByNombreIgnoreCase(producto.getNombre())) {
             result.rejectValue("nombre", "producto.nombre.duplicado");
@@ -173,11 +169,7 @@ public class PanelController {
 
     /** Carga el producto en el formulario del panel para editarlo. */
     @GetMapping("/admin/productos/{id}/editar")
-    public String editarProducto(@PathVariable Long id, HttpSession session, Model model, RedirectAttributes flash) {
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
-
+    public String editarProducto(@PathVariable Long id, Model model, RedirectAttributes flash) {
         Optional<Producto> producto = productoRepository.findById(id);   // SELECT ... WHERE id = ?
         if (producto.isEmpty()) {
             flash.addFlashAttribute("error", "Ese producto ya no existe.");
@@ -194,13 +186,8 @@ public class PanelController {
     public String actualizarProducto(@PathVariable Long id,
                                      @Valid @ModelAttribute("producto") Producto datos,
                                      BindingResult result,
-                                     HttpSession session,
                                      Model model,
                                      RedirectAttributes flash) {
-
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
 
         Optional<Producto> existente = productoRepository.findById(id);
         if (existente.isEmpty()) {
@@ -230,11 +217,7 @@ public class PanelController {
 
     /** DELETE: solo si ningún pedido usa el producto (integridad referencial). */
     @PostMapping("/admin/productos/{id}/eliminar")
-    public String eliminarProducto(@PathVariable Long id, HttpSession session, RedirectAttributes flash) {
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
-
+    public String eliminarProducto(@PathVariable Long id, RedirectAttributes flash) {
         Optional<Producto> producto = productoRepository.findById(id);
         if (producto.isEmpty()) {
             flash.addFlashAttribute("error", "Ese producto ya no existe.");
@@ -258,12 +241,7 @@ public class PanelController {
     @PostMapping("/admin/pedidos/{id}/estado")
     public String cambiarEstado(@PathVariable Long id,
                                 @RequestParam(required = false) String estado,
-                                HttpSession session,
                                 RedirectAttributes flash) {
-
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
 
         Optional<Pedido> pedido = pedidoRepository.findById(id);
         Optional<EstadoPedido> nuevoEstado = convertirEstado(estado);
@@ -283,12 +261,7 @@ public class PanelController {
     @PostMapping("/admin/pedidos/{id}/monto")
     public String confirmarMonto(@PathVariable Long id,
                                  @RequestParam(required = false) String monto,
-                                 HttpSession session,
                                  RedirectAttributes flash) {
-
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
 
         Optional<Pedido> pedido = pedidoRepository.findById(id);
         if (pedido.isEmpty()) {
@@ -311,11 +284,7 @@ public class PanelController {
     }
 
     @PostMapping("/admin/pedidos/{id}/eliminar")
-    public String eliminarPedido(@PathVariable Long id, HttpSession session, RedirectAttributes flash) {
-        if (SesionUsuario.conRol(session, Rol.ADMINISTRADOR) == null) {
-            return "redirect:/login";
-        }
-
+    public String eliminarPedido(@PathVariable Long id, RedirectAttributes flash) {
         if (!pedidoRepository.existsById(id)) {
             flash.addFlashAttribute("error", "Ese pedido ya no existe.");
             return "redirect:/admin/panel";
@@ -323,6 +292,27 @@ public class PanelController {
         pedidoRepository.deleteById(id);   // DELETE FROM pedido WHERE id = ?
         flash.addFlashAttribute("exito", "Pedido eliminado.");
         return "redirect:/admin/panel";
+    }
+
+    // ------------------------- Clientes -------------------------
+
+    /** Activa o desactiva la cuenta de un cliente. Una cuenta desactivada no puede iniciar sesión ni usar su token JWT. */
+    @PostMapping("/admin/clientes/{id}/activo")
+    public String cambiarActivo(@PathVariable Long id, RedirectAttributes flash) {
+        Optional<Usuario> cliente = usuarioRepository.findById(id)
+                .filter(u -> u.getRol() == Rol.CLIENTE);   // las cuentas de administrador no se tocan aquí
+        if (cliente.isEmpty()) {
+            flash.addFlashAttribute("error", "Ese cliente ya no existe.");
+            return "redirect:/admin/panel?tab=clientes";
+        }
+
+        Usuario usuario = cliente.get();
+        usuario.setActivo(!usuario.isActivo());
+        usuarioRepository.save(usuario);   // UPDATE usuario SET activo = ? WHERE id = ?
+
+        flash.addFlashAttribute("exito", "La cuenta de " + usuario.getNombre()
+                + (usuario.isActivo() ? " quedó activa." : " quedó desactivada: ya no puede iniciar sesión."));
+        return "redirect:/admin/panel?tab=clientes";
     }
 
     // =====================================================================

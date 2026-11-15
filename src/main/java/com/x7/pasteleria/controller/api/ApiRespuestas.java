@@ -1,9 +1,5 @@
 package com.x7.pasteleria.controller.api;
 
-import com.x7.pasteleria.controller.SesionUsuario;
-import com.x7.pasteleria.model.Rol;
-import com.x7.pasteleria.model.Usuario;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
@@ -46,17 +42,6 @@ public class ApiRespuestas {
         Map<String, Object> cuerpo = cuerpo(HttpStatus.BAD_REQUEST, "Los datos enviados no son válidos.");
         cuerpo.put("errores", errores);
         return ResponseEntity.badRequest().body(cuerpo);
-    }
-
-    public ResponseEntity<Map<String, Object>> verificarRol(HttpSession session, Rol rolRequerido) {
-        Usuario usuario = SesionUsuario.actual(session);
-        if (usuario == null) {
-            return error(HttpStatus.UNAUTHORIZED, "Debes iniciar sesión (POST /api/auth/login).");
-        }
-        if (rolRequerido != null && usuario.getRol() != rolRequerido) {
-            return error(HttpStatus.FORBIDDEN, "Tu rol no tiene permiso para realizar esta operación.");
-        }
-        return null;
     }
 
     private String mensaje(ObjectError error) {

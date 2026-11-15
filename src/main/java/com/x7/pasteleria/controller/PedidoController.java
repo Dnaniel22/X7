@@ -10,8 +10,9 @@ import com.x7.pasteleria.model.Usuario;
 import com.x7.pasteleria.repository.PedidoRepository;
 import com.x7.pasteleria.repository.ProductoRepository;
 import com.x7.pasteleria.repository.UsuarioRepository;
-import jakarta.servlet.http.HttpSession;
+import com.x7.pasteleria.security.UsuarioPrincipal;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -91,14 +92,14 @@ public class PedidoController {
 
     @GetMapping("/pedido")
     public String formularioPedido(@RequestParam(name = "producto", required = false) Long productoId,
-                                   HttpSession session,
+                                   @AuthenticationPrincipal UsuarioPrincipal usuario,
                                    Model model) {
 
         PedidoForm form = new PedidoForm();
         form.setProductoId(productoId);
 
         // Si es un cliente, sus datos de contacto aparecen ya completados.
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
+        Usuario cliente = clienteActual(usuario);
         if (cliente != null) {
             form.setNombreContacto(cliente.getNombre());
             form.setTelefono(cliente.getTelefono());
@@ -112,15 +113,10 @@ public class PedidoController {
     @PostMapping("/pedido")
     public String registrarPedido(@Valid @ModelAttribute("pedido") PedidoForm form,
                                   BindingResult result,
-                                  HttpSession session,
-                                  Model model,
+                                  @AuthenticationPrincipal UsuarioPrincipal cliente,
                                   RedirectAttributes flash) {
 
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
-        if (cliente == null) {
-            model.addAttribute("mostrarModalAuth", true);
-            return "pedido";
-        }
+        // Solo llega aquí un CLIENTE autenticado: SecurityConfig exige hasRole("CLIENTE") para POST /pedido.
 
         // Reglas que dependen de la base de datos o de las listas del negocio.
         Producto producto = null;
@@ -175,9 +171,9 @@ public class PedidoController {
     // ---------------- Cotizar catering ----------------
 
     @GetMapping("/reservar")
-    public String formularioReserva(HttpSession session, Model model) {
+    public String formularioReserva(@AuthenticationPrincipal UsuarioPrincipal usuario, Model model) {
         CateringForm form = new CateringForm();
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
+        Usuario cliente = clienteActual(usuario);
         if (cliente != null) {
             form.setTelefono(cliente.getTelefono());
         }
@@ -188,15 +184,10 @@ public class PedidoController {
     @PostMapping("/reservar")
     public String registrarReserva(@Valid @ModelAttribute("catering") CateringForm form,
                                    BindingResult result,
-                                   HttpSession session,
-                                   Model model,
+                                   @AuthenticationPrincipal UsuarioPrincipal cliente,
                                    RedirectAttributes flash) {
 
-        Usuario cliente = SesionUsuario.conRol(session, Rol.CLIENTE);
-        if (cliente == null) {
-            model.addAttribute("mostrarModalAuth", true);
-            return "reservar";
-        }
+        // Solo llega aquí un CLIENTE autenticado: SecurityConfig exige hasRole("CLIENTE") para POST /reservar.
 
         if (form.getTipoEvento() != null && !TIPOS_EVENTO.contains(form.getTipoEvento())) {
             result.rejectValue("tipoEvento", "catering.tipoEvento.valido");
@@ -229,6 +220,14 @@ public class PedidoController {
     }
 
     // ---------------- Apoyo ----------------
+
+    /** Datos actuales del cliente que inició sesión, para completar el formulario. Null si es visitante o administrador. */
+    private Usuario clienteActual(UsuarioPrincipal usuario) {
+        if (usuario == null || usuario.getRol() != Rol.CLIENTE) {
+            return null;
+        }
+        return usuarioRepository.findById(usuario.getId()).orElse(null);
+    }
 
     /** Guarda el pedido y, con el id que generó PostgreSQL, le asigna su código visible. */
     private Pedido guardarConCodigo(Pedido pedido) {

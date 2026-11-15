@@ -1,105 +1,88 @@
 package com.x7.pasteleria.controller;
 
+import com.x7.pasteleria.dto.RegistroForm;
 import com.x7.pasteleria.model.Rol;
 import com.x7.pasteleria.model.Usuario;
 import com.x7.pasteleria.repository.UsuarioRepository;
+import com.x7.pasteleria.security.SecurityConfig;
+import com.x7.pasteleria.security.SesionSeguridad;
+import com.x7.pasteleria.security.UsuarioPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional;
-
+/**
+ * Vistas de inicio de sesión y registro.
+ * El POST /login y el POST /logout los procesa Spring Security (ver SecurityConfig),
+ * por eso aquí solo se muestra el formulario de login.
+ */
 @Controller
 public class AuthController {
 
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final SesionSeguridad sesionSeguridad;
 
-    public AuthController(UsuarioRepository usuarioRepository) {
+    public AuthController(UsuarioRepository usuarioRepository,
+                          PasswordEncoder passwordEncoder,
+                          SesionSeguridad sesionSeguridad) {
         this.usuarioRepository = usuarioRepository;
-    }
-
-    /**
-     * El formulario de registro solo puede llenar estos campos.
-     * Así nadie puede enviar "rol=ADMINISTRADOR" o un "id" desde el navegador.
-     */
-    @InitBinder("usuario")
-    public void camposPermitidos(WebDataBinder binder) {
-        binder.setAllowedFields("nombre", "email", "telefono", "direccion", "password", "confirmarPassword");
+        this.passwordEncoder = passwordEncoder;
+        this.sesionSeguridad = sesionSeguridad;
     }
 
     // ---------------- Iniciar sesión ----------------
 
     @GetMapping("/login")
-    public String login(HttpSession session, Model model) {
-        Usuario enSesion = SesionUsuario.actual(session);
-        if (enSesion != null) {
-            return "redirect:" + SesionUsuario.rutaPanel(enSesion);
+    public String login(@AuthenticationPrincipal UsuarioPrincipal usuario, HttpSession session, Model model) {
+        if (usuario != null) {
+            return "redirect:" + usuario.rutaPanel();
         }
-        model.addAttribute("email", "");
+        // Si el intento anterior falló, se vuelve a mostrar el correo que se escribió.
+        Object email = session.getAttribute(SecurityConfig.LOGIN_EMAIL);
+        session.removeAttribute(SecurityConfig.LOGIN_EMAIL);
+        model.addAttribute("email", email == null ? "" : email);
         return "autenticacion/login";
-    }
-
-    @PostMapping("/login")
-    public String procesarLogin(@RequestParam(required = false) String email,
-                                @RequestParam(required = false) String password,
-                                HttpSession session,
-                                Model model) {
-
-        model.addAttribute("email", email);
-        if (email == null || password == null) {
-            model.addAttribute("error", "Ingresa tu correo y tu contraseña.");
-            return "autenticacion/login";
-        }
-
-        // SELECT ... FROM usuario WHERE upper(email) = upper(?)
-        Optional<Usuario> usuario = usuarioRepository.findByEmailIgnoreCase(email)
-                .filter(u -> u.getPassword().equals(password));
-
-        if (usuario.isEmpty()) {
-            model.addAttribute("error", "Correo o contraseña incorrectos.");
-            return "autenticacion/login";
-        }
-
-        SesionUsuario.iniciar(session, usuario.get());
-        return "redirect:" + SesionUsuario.rutaPanel(usuario.get());
     }
 
     // ---------------- Crear cuenta ----------------
 
     @GetMapping("/registro")
-    public String registro(HttpSession session, Model model) {
-        Usuario enSesion = SesionUsuario.actual(session);
-        if (enSesion != null) {
-            return "redirect:" + SesionUsuario.rutaPanel(enSesion);
+    public String registro(@AuthenticationPrincipal UsuarioPrincipal usuario, Model model) {
+        if (usuario != null) {
+            return "redirect:" + usuario.rutaPanel();
         }
-        model.addAttribute("usuario", new Usuario());
+        model.addAttribute("usuario", new RegistroForm());
         return "autenticacion/registro";
     }
 
     @PostMapping("/registro")
-    public String procesarRegistro(@Valid @ModelAttribute("usuario") Usuario usuario,
+    public String procesarRegistro(@Valid @ModelAttribute("usuario") RegistroForm form,
                                    BindingResult result,
                                    @RequestParam(defaultValue = "false") boolean terminos,
-                                   HttpSession session,
+                                   HttpServletRequest request,
+                                   HttpServletResponse response,
                                    RedirectAttributes flash) {
 
-        // 1. Las anotaciones de Usuario (@NotBlank, @Email, @Size...) ya se revisaron con @Valid.
+        // 1. Las anotaciones de RegistroForm (@NotBlank, @Email, @Size, @Pattern...) ya se revisaron con @Valid.
         // 2. Reglas que comparan campos o consultan la base de datos: se agregan al mismo BindingResult.
-        if (usuario.getConfirmarPassword() == null) {
+        if (form.getConfirmarPassword() == null) {
             result.rejectValue("confirmarPassword", "usuario.password.confirmar");
-        } else if (usuario.getPassword() != null && !usuario.getPassword().equals(usuario.getConfirmarPassword())) {
+        } else if (form.getPassword() != null && !form.getPassword().equals(form.getConfirmarPassword())) {
             result.rejectValue("confirmarPassword", "usuario.password.noCoincide");
         }
-        if (usuario.getEmail() != null && usuarioRepository.existsByEmailIgnoreCase(usuario.getEmail())) {
+        if (form.getEmail() != null && usuarioRepository.existsByEmailIgnoreCase(form.getEmail())) {
             result.rejectValue("email", "usuario.email.duplicado");
         }
         if (!terminos) {
@@ -110,18 +93,18 @@ public class AuthController {
             return "autenticacion/registro";
         }
 
-        usuario.setEmail(usuario.getEmail().toLowerCase());
-        usuario.setRol(Rol.CLIENTE);
+        // La contraseña se guarda cifrada con BCrypt; el rol siempre es CLIENTE (no se toma del formulario).
+        Usuario usuario = new Usuario(
+                form.getNombre(),
+                form.getEmail().toLowerCase(),
+                form.getTelefono(),
+                form.getDireccion(),
+                passwordEncoder.encode(form.getPassword()),
+                Rol.CLIENTE);
         Usuario guardado = usuarioRepository.save(usuario);   // INSERT INTO usuario ...
 
-        SesionUsuario.iniciar(session, guardado);
+        sesionSeguridad.iniciar(guardado, request, response);   // entra directo a su panel
         flash.addFlashAttribute("exito", "¡Bienvenido, " + guardado.getNombre() + "! Tu cuenta fue creada.");
         return "redirect:/cliente/panel";
-    }
-
-    @PostMapping("/logout")
-    public String logout(HttpSession session) {
-        session.invalidate();
-        return "redirect:/";
     }
 }

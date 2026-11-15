@@ -53,7 +53,7 @@ public class Pedido {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_pedido_usuario"))
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pedidos", "password"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pedidos"})
     private Usuario usuario;
 
     // Relación N a 1 opcional: en catering y en pedidos personalizados no hay producto (queda en NULL).

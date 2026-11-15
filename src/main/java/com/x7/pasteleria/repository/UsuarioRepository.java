@@ -21,10 +21,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Query("""
             select new com.x7.pasteleria.dto.ClienteResumen(
-                       u.id, u.nombre, u.email, u.telefono, u.direccion, count(p))
+                       u.id, u.nombre, u.email, u.telefono, u.direccion, u.activo, count(p))
             from Usuario u left join u.pedidos p
             where u.rol = :rol
-            group by u.id, u.nombre, u.email, u.telefono, u.direccion
+            group by u.id, u.nombre, u.email, u.telefono, u.direccion, u.activo
             order by u.nombre
             """)
     List<ClienteResumen> resumenPorRol(@Param("rol") Rol rol);

@@ -1,7 +1,6 @@
 package com.x7.pasteleria.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -55,10 +53,11 @@ public class Usuario {
     @Column(length = 150)
     private String direccion;
 
-    // WRITE_ONLY: la API REST puede recibir la contraseña, pero nunca la devuelve en el JSON.
+    // Guarda el hash BCrypt de la contraseña (siempre 60 caracteres), nunca el texto original.
+    // Las reglas de la contraseña que escribe el usuario están en RegistroForm.
     @NotBlank(message = "{usuario.password.obligatorio}")
-    @Size(min = 6, max = 60, message = "{usuario.password.tamano}")
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Size(max = 60)
+    @JsonIgnore
     @Column(nullable = false, length = 60)
     private String password;
 
@@ -67,10 +66,10 @@ public class Usuario {
     @Column(nullable = false, length = 20)
     private Rol rol = Rol.CLIENTE;
 
-    // Solo existe en el formulario de registro: @Transient evita que se cree una columna.
-    @Transient
-    @JsonIgnore
-    private String confirmarPassword;
+    // Una cuenta desactivada por el administrador no puede iniciar sesión (UserDetails.isEnabled()).
+    // El DEFAULT permite agregar la columna a una tabla que ya tiene filas.
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean activo = true;
 
     // Lado inverso de la relación 1 a N: un usuario registra muchos pedidos.
     // La clave foránea (usuario_id) está en la tabla pedido.
@@ -108,8 +107,8 @@ public class Usuario {
     public void setPassword(String password) { this.password = password; }
     public Rol getRol() { return rol; }
     public void setRol(Rol rol) { this.rol = rol; }
-    public String getConfirmarPassword() { return confirmarPassword; }
-    public void setConfirmarPassword(String confirmarPassword) { this.confirmarPassword = confirmarPassword; }
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
     public List<Pedido> getPedidos() { return pedidos; }
     public void setPedidos(List<Pedido> pedidos) { this.pedidos = pedidos; }
 }
