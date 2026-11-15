@@ -23,8 +23,9 @@ CREATE TABLE usuario (
     email      varchar(120) NOT NULL,
     telefono   varchar(9),
     direccion  varchar(150),
-    password   varchar(60)  NOT NULL,
+    password   varchar(60)  NOT NULL,             -- hash BCrypt ($2a$10$...), nunca la contraseña en texto
     rol        varchar(20)  NOT NULL CHECK (rol IN ('CLIENTE', 'ADMINISTRADOR')),
+    activo     boolean      DEFAULT true NOT NULL, -- false = no puede iniciar sesión (Spring Security)
     CONSTRAINT usuario_pkey     PRIMARY KEY (id),
     CONSTRAINT uk_usuario_email UNIQUE (email)
 );

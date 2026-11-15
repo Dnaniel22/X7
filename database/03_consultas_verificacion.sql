@@ -27,8 +27,18 @@ SELECT 'producto', COUNT(*) FROM producto
 UNION ALL
 SELECT 'pedido',   COUNT(*) FROM pedido;
 
--- 4. Usuarios (la contraseña se omite a propósito)
-SELECT id, nombre, email, telefono, direccion, rol
+-- 4. Usuarios con su rol y si la cuenta está activa
+SELECT id, nombre, email, telefono, direccion, rol, activo
+FROM usuario
+ORDER BY id;
+
+-- 4b. Evidencia de Spring Security: las contraseñas están cifradas con BCrypt.
+--     Todas empiezan con $2a$10$ y miden 60 caracteres; no se puede recuperar el texto original.
+SELECT email,
+       rol,
+       LEFT(password, 7)          AS algoritmo_y_costo,
+       LENGTH(password)           AS longitud,
+       password LIKE '$2_$%'      AS es_bcrypt
 FROM usuario
 ORDER BY id;
 
